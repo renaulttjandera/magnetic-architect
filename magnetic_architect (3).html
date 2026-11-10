@@ -1,0 +1,3379 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <title>Magnetic Architect — Lorentz-Force Puzzle</title>
+    <style>
+      :root {
+        --bg: #060a14;
+        --panel: #0f1629;
+        --panel2: #151f3a;
+        --line: #25325f;
+        --txt: #dce6ff;
+        --dim: #8a99c4;
+        --out: #4cc9f0;
+        --in: #ff7b54;
+        --pos: #ffd166;
+        --neg: #c77dff;
+        --ok: #5dffa8;
+        --bad: #ff4d6d;
+        --warn: #ffc857;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        color: var(--txt);
+        font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+      }
+      body {
+        min-height: 100vh;
+        background: radial-gradient(
+            1200px 700px at 15% -10%,
+            #15265a 0%,
+            transparent 60%
+          ),
+          radial-gradient(900px 600px at 105% 0%, #2b1748 0%, transparent 55%),
+          var(--bg);
+      }
+      #app {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 10px 12px 28px;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 2px 2px 10px;
+      }
+      .brand h1 {
+        margin: 0;
+        font-size: 20px;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+      }
+      .brand h1 b {
+        color: var(--out);
+      }
+      .brand h1 i {
+        color: var(--in);
+        font-style: normal;
+      }
+      .brand small {
+        display: block;
+        color: var(--dim);
+        font-size: 12px;
+      }
+      .hright {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        min-width: 0;
+        max-width: 100%;
+      }
+      #levels {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding: 2px;
+        max-width: 100%;
+        scrollbar-width: thin;
+      }
+      .lvl {
+        flex: 0 0 auto;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        color: var(--txt);
+        border-radius: 10px;
+        padding: 4px 8px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 48px;
+        font: inherit;
+        line-height: 1.15;
+        position: relative;
+      }
+      .lvl b {
+        font-size: 15px;
+      }
+      .lvl i {
+        font-style: normal;
+        color: var(--warn);
+        font-size: 10px;
+        letter-spacing: 1px;
+      }
+      .lvl:hover {
+        border-color: var(--out);
+      }
+      .lvl.active {
+        border-color: var(--out);
+        background: #12304a;
+        box-shadow: 0 0 0 1px var(--out) inset;
+      }
+      .lvl.done b::after {
+        content: " ✓";
+        color: var(--ok);
+        font-size: 11px;
+      }
+      #prog {
+        font-size: 12px;
+        color: var(--dim);
+        white-space: nowrap;
+      }
+      #prog b {
+        color: var(--txt);
+      }
+      #saveState {
+        font-size: 11px;
+        color: var(--dim);
+        white-space: nowrap;
+      }
+      #saveState.ok {
+        color: var(--ok);
+      }
+      #saveState.bad {
+        color: var(--warn);
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 380px;
+        gap: 12px;
+        align-items: start;
+      }
+      .col {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-width: 0;
+      }
+      .card {
+        background: linear-gradient(180deg, var(--panel2), var(--panel));
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 12px 14px;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+      }
+      .card h2 {
+        margin: 0 0 6px;
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--dim);
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .card h2 .count {
+        letter-spacing: 0;
+        text-transform: none;
+        font-weight: 600;
+        color: var(--txt);
+      }
+      #stageWrap {
+        width: 100%;
+      }
+      #stage {
+        position: relative;
+        margin: 0 auto;
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+        line-height: 0;
+      }
+      canvas {
+        display: block;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      #chip {
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        font: 700 11px ui-monospace, Consolas, monospace;
+        letter-spacing: 0.12em;
+        padding: 4px 10px;
+        border-radius: 99px;
+        background: rgba(10, 16, 35, 0.8);
+        border: 1px solid var(--line);
+        color: var(--out);
+        line-height: 1.3;
+      }
+      #chip.running {
+        color: var(--ok);
+        border-color: var(--ok);
+      }
+      #chip.paused {
+        color: var(--warn);
+        border-color: var(--warn);
+      }
+      #chip.success {
+        color: #04130a;
+        background: var(--ok);
+        border-color: var(--ok);
+      }
+      #chip.fail {
+        color: #fff;
+        background: var(--bad);
+        border-color: var(--bad);
+      }
+      #hud {
+        position: absolute;
+        left: 10px;
+        bottom: 8px;
+        font: 11px ui-monospace, Consolas, monospace;
+        color: #9fb2e8;
+        background: rgba(8, 12, 28, 0.72);
+        padding: 3px 8px;
+        border-radius: 8px;
+        line-height: 1.3;
+        pointer-events: none;
+      }
+      #toast {
+        position: absolute;
+        left: 50%;
+        top: 12px;
+        transform: translateX(-50%);
+        background: rgba(255, 77, 109, 0.95);
+        color: #fff;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 10px;
+        line-height: 1.35;
+        max-width: 90%;
+        text-align: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s;
+        z-index: 3;
+      }
+      #toast.show {
+        opacity: 1;
+      }
+      #toast.info {
+        background: rgba(30, 90, 150, 0.95);
+      }
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(4, 8, 20, 0.78);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1.45;
+        padding: 12px;
+        z-index: 50;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .modal {
+        background: linear-gradient(180deg, #18244a, #0e1630);
+        border: 1px solid var(--out);
+        border-radius: 16px;
+        padding: 16px 20px;
+        width: min(520px, 100%);
+        max-height: 94vh;
+        overflow: auto;
+        box-shadow: 0 0 40px rgba(76, 201, 240, 0.25);
+      }
+      .modal h3 {
+        margin: 0 0 6px;
+        font-size: 20px;
+      }
+      .modal .stars {
+        font-size: 26px;
+        color: var(--warn);
+        letter-spacing: 6px;
+      }
+      .modal table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0 12px;
+        font-size: 13px;
+      }
+      .modal td {
+        padding: 3px 0;
+        border-bottom: 1px dashed #2a3a6c;
+      }
+      .modal td:last-child {
+        text-align: right;
+        font-family: ui-monospace, Consolas, monospace;
+      }
+      .modal tr.tot td {
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--ok);
+        border-bottom: none;
+      }
+      .modal .btns {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 6px;
+      }
+      .modal ol {
+        margin: 6px 0 10px;
+        padding-left: 20px;
+      }
+      .modal li {
+        margin: 5px 0;
+      }
+      .rule {
+        background: #0b1330;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px 10px;
+        margin: 8px 0;
+        font-size: 13px;
+      }
+      .rule b.o {
+        color: var(--out);
+      }
+      .rule b.i {
+        color: var(--in);
+      }
+      .testrow {
+        display: flex;
+        gap: 8px;
+        padding: 5px 0;
+        border-bottom: 1px dashed #2a3a6c;
+        font-size: 12.5px;
+      }
+      .testrow .ok {
+        color: var(--ok);
+        font-weight: 700;
+      }
+      .testrow .no {
+        color: var(--bad);
+        font-weight: 700;
+      }
+      .testrow small {
+        display: block;
+        color: var(--dim);
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 11px;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-top: 10px;
+      }
+      button.btn {
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        color: var(--txt);
+        background: #1a2850;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px 14px;
+        min-height: 40px;
+      }
+      button.btn:hover:not(:disabled) {
+        border-color: var(--out);
+        background: #1d3160;
+      }
+      button.btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      button.btn.small {
+        min-height: 32px;
+        padding: 4px 10px;
+        font-size: 12.5px;
+      }
+      button.primary {
+        background: linear-gradient(180deg, #1fa6d6, #1572a6);
+        border-color: #4cc9f0;
+        color: #fff;
+        letter-spacing: 0.08em;
+        min-width: 120px;
+        font-size: 15px;
+      }
+      button.primary:hover:not(:disabled) {
+        background: linear-gradient(180deg, #34c1f0, #1a86c2);
+      }
+      button.danger {
+        border-color: #7a2a45;
+        color: #ffb3c4;
+      }
+      button.danger:hover:not(:disabled) {
+        border-color: var(--bad);
+        background: #3a1630;
+      }
+      button.btn.armed {
+        background: #5a1f3a;
+        border-color: var(--bad);
+        color: #fff;
+      }
+      select {
+        font: inherit;
+        background: #1a2850;
+        color: var(--txt);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px;
+        min-height: 40px;
+      }
+      .sp {
+        flex: 1;
+      }
+      .toggles {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+        margin-top: 10px;
+        padding: 0 2px;
+      }
+      .check {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 13px;
+        cursor: pointer;
+        color: var(--txt);
+      }
+      .check input {
+        accent-color: #4cc9f0;
+        width: 16px;
+        height: 16px;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 14px;
+        font-size: 12px;
+        color: var(--dim);
+        margin-top: 8px;
+        padding: 0 2px;
+      }
+      .legend b {
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 15px;
+      }
+      .seg {
+        display: flex;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .seg button {
+        flex: 1;
+        font: inherit;
+        font-weight: 600;
+        background: #121c3c;
+        color: var(--dim);
+        border: 0;
+        padding: 8px;
+        cursor: pointer;
+        min-height: 40px;
+      }
+      .seg button.active.out {
+        background: #10405a;
+        color: var(--out);
+      }
+      .seg button.active.in {
+        background: #5a2812;
+        color: var(--in);
+      }
+      .seg button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 0 8px;
+        margin: 8px 0 0;
+      }
+      .row label {
+        color: var(--dim);
+        font-size: 12.5px;
+      }
+      .row output {
+        font: 12.5px ui-monospace, Consolas, monospace;
+        color: var(--txt);
+      }
+      .ctl {
+        grid-column: 1/3;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .ctl input[type="range"] {
+        flex: 1;
+        min-width: 0;
+        margin: 0;
+        accent-color: #4cc9f0;
+        height: 26px;
+      }
+      .nudge {
+        flex: 0 0 auto;
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: #16224a;
+        color: var(--txt);
+        font: 700 16px/1 system-ui;
+        cursor: pointer;
+        padding: 0;
+      }
+      .nudge:hover:not(:disabled) {
+        border-color: var(--out);
+      }
+      .nudge:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+      .glist {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .gitem {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-align: left;
+        font: inherit;
+        color: var(--txt);
+        background: #121c3c;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 7px 10px;
+        cursor: pointer;
+        min-height: 40px;
+      }
+      .gitem:hover {
+        border-color: #5b73c7;
+      }
+      .gitem.sel {
+        border-color: #fff;
+        box-shadow: 0 0 0 1px #fff inset;
+      }
+      .gitem .sym {
+        font: 700 20px/1 ui-monospace, Consolas, monospace;
+        width: 22px;
+        text-align: center;
+      }
+      .gitem.out .sym {
+        color: var(--out);
+      }
+      .gitem.in .sym {
+        color: var(--in);
+      }
+      .gitem .gname {
+        font-weight: 700;
+      }
+      .gitem .gmeta {
+        color: var(--dim);
+        font: 12px ui-monospace, Consolas, monospace;
+        margin-left: auto;
+        text-align: right;
+      }
+      .gitem .lk {
+        font-size: 11px;
+        color: var(--warn);
+        border: 1px solid #6b5a22;
+        border-radius: 6px;
+        padding: 0 5px;
+      }
+      .empty {
+        color: var(--dim);
+        font-size: 13px;
+        padding: 10px 4px 2px;
+      }
+      .editor {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--line);
+      }
+      .ed-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .stat {
+        display: inline-block;
+        background: #101a38;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 2px 8px;
+        font-size: 12px;
+        color: var(--dim);
+        margin: 3px 4px 0 0;
+      }
+      .stat b {
+        color: var(--txt);
+        font-weight: 600;
+      }
+      .brief {
+        color: #c7d4f7;
+        font-size: 13.5px;
+      }
+      .brief b {
+        color: #fff;
+      }
+      .brief code {
+        font-family: ui-monospace, Consolas, monospace;
+        background: #0b1330;
+        padding: 0 4px;
+        border-radius: 4px;
+        color: var(--out);
+      }
+      .goal {
+        background: #0b2a22;
+        border: 1px solid #1d5c49;
+        color: #bff5dd;
+        border-radius: 10px;
+        padding: 6px 10px;
+        font-size: 13px;
+        margin: 6px 0;
+      }
+      .steps {
+        margin: 8px 0 0;
+        padding-left: 20px;
+        color: #c7d4f7;
+        font-size: 13px;
+      }
+      .steps li {
+        margin: 3px 0;
+      }
+      .tip {
+        margin-top: 8px;
+        font-size: 12.5px;
+        color: #ffe3a3;
+        background: #2a2410;
+        border: 1px solid #5a4a18;
+        border-radius: 10px;
+        padding: 6px 10px;
+      }
+      .fixed {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        margin-top: 4px;
+      }
+      .fixed div {
+        background: #101a38;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 5px 8px;
+      }
+      .fixed span {
+        display: block;
+        color: var(--dim);
+        font-size: 11px;
+      }
+      .fixed b {
+        font: 600 13px ui-monospace, Consolas, monospace;
+      }
+      .note {
+        color: var(--dim);
+        font-size: 12px;
+        margin-top: 6px;
+      }
+      details.card > summary {
+        cursor: pointer;
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--dim);
+        font-weight: 700;
+        list-style: none;
+      }
+      details.card > summary::-webkit-details-marker {
+        display: none;
+      }
+      details.card > summary::before {
+        content: "▸ ";
+        color: var(--out);
+      }
+      details[open].card > summary::before {
+        content: "▾ ";
+      }
+      details.card .inner {
+        margin-top: 10px;
+      }
+      .tele {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 3px 14px;
+        font: 12.5px ui-monospace, SFMono-Regular, Consolas, monospace;
+      }
+      .tele div {
+        display: flex;
+        justify-content: space-between;
+        gap: 6px;
+        border-bottom: 1px dotted #26356a;
+        padding: 1px 0;
+      }
+      .tele span {
+        color: var(--dim);
+      }
+      .tele b {
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .tele .wide {
+        grid-column: 1/3;
+        flex-direction: column;
+        border: 0;
+      }
+      .tele .wide b {
+        white-space: normal;
+        color: #bfe9ff;
+        font-weight: 500;
+      }
+      #selfcheck {
+        font-size: 11.5px;
+        color: var(--dim);
+        margin-top: 8px;
+      }
+      #selfcheck.ok {
+        color: var(--ok);
+      }
+      #selfcheck.no {
+        color: var(--bad);
+      }
+      .kbd {
+        font: 11px ui-monospace, Consolas, monospace;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        padding: 0 5px;
+        background: #0d1634;
+      }
+      @media (max-width: 960px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+      @media (max-width: 520px) {
+        #app {
+          padding: 6px 6px 20px;
+        }
+        .card {
+          padding: 10px 11px;
+        }
+        .brand h1 {
+          font-size: 17px;
+        }
+        button.btn {
+          padding: 8px 10px;
+        }
+        .fixed {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div class="brand">
+          <h1>MAGNETIC <b>ARCH</b><i>I</i>TECT</h1>
+          <small
+            >Bend a charged particle into the target using magnetic fields · F =
+            q(v × B)</small
+          >
+        </div>
+        <div class="hright">
+          <span id="prog"></span><span id="saveState"></span>
+          <button class="btn small" id="btnHelp" title="How to play">
+            ? How to play
+          </button>
+          <div id="levels"></div>
+        </div>
+      </header>
+
+      <div class="layout">
+        <div class="col">
+          <div id="stageWrap">
+            <div id="stage">
+              <canvas id="arena" aria-label="Magnetic field arena"></canvas>
+              <div id="chip">READY</div>
+              <div id="hud"></div>
+              <div id="toast"></div>
+            </div>
+          </div>
+          <div>
+            <div class="actions" style="margin-top: 0">
+              <button class="btn primary" id="btnLaunch">▶ LAUNCH</button>
+              <button class="btn" id="btnPause" disabled>Pause</button>
+              <button class="btn" id="btnStop" disabled>Stop</button>
+              <select id="selSpeed" title="Simulation speed">
+                <option value="0.25">0.25×</option>
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1× speed</option>
+                <option value="2">2×</option>
+                <option value="4">4×</option>
+              </select>
+            </div>
+            <div class="toggles">
+              <label class="check"
+                ><input type="checkbox" id="optPreview" /> Predicted path</label
+              >
+              <label class="check"
+                ><input type="checkbox" id="optIntensity" /> Field
+                shading</label
+              >
+              <label class="check"
+                ><input type="checkbox" id="optVectors" /> Force arrows</label
+              >
+            </div>
+            <div class="legend">
+              <span
+                ><b style="color: var(--out)">•</b> field out of screen</span
+              >
+              <span><b style="color: var(--in)">×</b> field into screen</span>
+              <span
+                ><b style="color: #aab">○</b> overlapping fields cancel to
+                zero</span
+              >
+              <span>dashed circle = edge of a field (no field outside)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="col">
+          <div class="card" id="cMission" style="display: none">
+            <h2><span id="lvlTag">Mission</span></h2>
+            <div
+              style="font-size: 19px; font-weight: 700; margin-bottom: 2px"
+              id="lvlName"
+            ></div>
+            <div class="goal">
+              🎯 Guide the particle into the green target. Don't touch the red
+              obstacles or leave the arena.
+            </div>
+            <div class="brief" id="lvlBrief"></div>
+            <ol class="steps hidden" id="lvlSteps"></ol>
+            <div class="tip hidden" id="lvlTip"></div>
+            <div id="lvlStats"></div>
+          </div>
+
+          <div class="card" id="cGens">
+            <h2>
+              <span>Magnetic fields — your tools</span
+              ><span class="count" id="genCount"></span>
+            </h2>
+            <div class="actions" style="margin-top: 2px">
+              <button class="btn" id="addOut" style="color: var(--out)">
+                ＋ Field • (out)
+              </button>
+              <button class="btn" id="addIn" style="color: var(--in)">
+                ＋ Field × (into)
+              </button>
+            </div>
+            <div class="glist" id="genList"></div>
+            <div id="genEditor" class="editor hidden">
+              <div class="ed-head">
+                <b id="edTitle"></b
+                ><span class="note" id="edLock" style="margin: 0"></span>
+              </div>
+              <div class="seg" id="segDir">
+                <button class="out" data-dir="1">• Out of screen</button
+                ><button class="in" data-dir="-1">× Into screen</button>
+              </div>
+              <div id="genRows"></div>
+              <div class="actions">
+                <button class="btn danger small" id="gDel">
+                  Delete this field
+                </button>
+              </div>
+            </div>
+            <div class="note" id="genHelp">
+              Select a field (list or arena) to edit it. Drag it in the arena to
+              move it; drag the white handle on its rim to resize it.
+            </div>
+            <div class="actions">
+              <button
+                class="btn small"
+                id="btnRestart"
+                title="Remove your changes and restore this level's starting fields"
+              >
+                Reset my fields
+              </button>
+              <button
+                class="btn small"
+                id="btnHint"
+                title="Loads a reference solution (−150 points)"
+              >
+                Show solution (−150)
+              </button>
+            </div>
+          </div>
+
+          <div class="card" id="cParticle">
+            <h2><span>Particle — fixed for this level</span></h2>
+            <div class="fixed" id="fixedGrid"></div>
+            <div class="note" id="turnNote"></div>
+          </div>
+
+          <details class="card" id="cDetails">
+            <summary>Details · telemetry · physics</summary>
+            <div class="inner">
+              <div class="tele">
+                <div><span>t</span><b id="tT">0.000 s</b></div>
+                <div><span>KE</span><b id="tKE">0 J</b></div>
+                <div><span>x</span><b id="tX"></b></div>
+                <div><span>y</span><b id="tY"></b></div>
+                <div><span>vx</span><b id="tVx"></b></div>
+                <div><span>vy</span><b id="tVy"></b></div>
+                <div><span>|v|</span><b id="tV"></b></div>
+                <div><span>Bz</span><b id="tB"></b></div>
+                <div><span>ax</span><b id="tAx"></b></div>
+                <div><span>ay</span><b id="tAy"></b></div>
+                <div><span>Fx</span><b id="tFx"></b></div>
+                <div><span>Fy</span><b id="tFy"></b></div>
+                <div><span>r꜀ = mv/|q|B</span><b id="tR"></b></div>
+                <div><span>F·v</span><b id="tFv"></b></div>
+                <div class="wide">
+                  <span>Superposition at particle: B = ΣBᵢ</span
+                  ><b id="tSrc"></b>
+                </div>
+              </div>
+              <div class="note">
+                SI units; the arena is 16 m × 10 m. A static magnetic field does
+                no work, so KE never changes.
+              </div>
+              <div class="actions">
+                <button class="btn small" id="btnTests">
+                  Run physics tests</button
+                ><button class="btn small danger" id="btnWipe">
+                  Erase all saved progress
+                </button>
+              </div>
+              <div class="note">
+                Shortcuts: <span class="kbd">Space</span> launch/pause ·
+                <span class="kbd">R</span> stop ·
+                <span class="kbd">Del</span> delete field ·
+                <span class="kbd">←↑↓→</span> nudge selected field.
+              </div>
+              <div id="selfcheck">Physics self-check pending…</div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </div>
+
+    <div id="result" class="overlay hidden">
+      <div class="modal" id="resultBox"></div>
+    </div>
+    <div id="tests" class="overlay hidden">
+      <div class="modal" id="testsBox"></div>
+    </div>
+    <div id="help" class="overlay hidden">
+      <div class="modal" id="helpBox"></div>
+    </div>
+
+    <script>
+      /* =====================================================================================
+   MAGNETIC ARCHITECT
+   ------------------------------------------------------------------------------------
+   Layers (kept separate on purpose):
+     1. CORE   – pure physics + simulation + level data + scoring (no DOM, testable in Node)
+     2. UI     – DOM controls, input handling, canvas rendering, local save, game flow
+   Game rule: the PARTICLE is fixed by each level. The player only designs the magnetic
+   field generators (direction, strength, radius, position).
+   ===================================================================================== */
+
+      // ==== CORE BEGIN ====
+      const ARENA_W = 16,
+        ARENA_H = 10; // metres. World origin = bottom-left, +y points UP (physics convention).
+      const PR = 0.14; // particle radius used for collisions/drawing (m)
+      const DT = 0.001; // FIXED physics time step (s). Rendering frame rate never changes it.
+      const TRAIL_STRIDE = 8; // store a trail point every 8 physics steps
+
+      /* ------------------------------------------------------------------------------------
+   PHYSICS
+   Magnetic field is always perpendicular to the screen: B = (0,0,Bz).
+     Bz > 0  → out of the screen (• dot)         Bz < 0  → into the screen (× cross)
+   Lorentz force on charge q with velocity v = (vx, vy, 0):
+        F = q (v × B) = q ( vy·Bz , −vx·Bz , 0 )
+   so
+        ax = (q/m)·vy·Bz        ay = −(q/m)·vx·Bz
+   Consequences (all verified by the self-tests):
+     • F·v = 0 always → the force only turns the velocity, |v| and kinetic energy are constant.
+     • Circular motion with cyclotron radius  r = m|v| / (|q||Bz|)  and angular speed ω = qBz/m.
+     • q→−q or Bz→−Bz flips the sense of rotation. 2×B halves r. Faster particles have larger r.
+   Each generator is a disc with a UNIFORM field B_i = dir·strength inside, 0 outside
+   (boundary is the dashed circle). Overlapping discs add by superposition: B = ΣB_i.
+   ------------------------------------------------------------------------------------ */
+      const Physics = (function () {
+        function genB(g) {
+          return g.dir * g.strength;
+        } // signed field of one generator (T)
+        function inside(g, x, y) {
+          const dx = x - g.x,
+            dy = y - g.y;
+          return dx * dx + dy * dy < g.R * g.R;
+        }
+
+        // Superposition: total Bz at (x,y) is the plain sum of every region containing the point.
+        function bzAt(gens, x, y) {
+          let b = 0;
+          for (let i = 0; i < gens.length; i++)
+            if (inside(gens[i], x, y)) b += genB(gens[i]);
+          return b;
+        }
+        // Per-generator contributions at a point (used for the "B = B1 + B2" readout)
+        function sources(gens, x, y) {
+          const out = [];
+          for (let i = 0; i < gens.length; i++)
+            if (inside(gens[i], x, y)) out.push({ n: i + 1, B: genB(gens[i]) });
+          return out;
+        }
+        function lorentz(q, vx, vy, bz) {
+          return { fx: q * vy * bz, fy: -q * vx * bz };
+        } // F = q v×B
+        function accel(q, m, vx, vy, bz) {
+          const k = q / m;
+          return { ax: k * vy * bz, ay: -k * vx * bz };
+        }
+        function cyclotronRadius(m, speed, q, bz) {
+          const d = Math.abs(q * bz);
+          return d < 1e-12 ? Infinity : (m * speed) / d;
+        }
+
+        /* Boris integrator, magnetic-only case (E = 0), with position leap-frogging:
+       1. drift half a step           x ← x + v·dt/2
+       2. sample B at that midpoint   (so a field boundary is crossed with O(dt) accuracy)
+       3. rotate v:  t = (q/m)·Bz·dt/2 ,  s = 2t/(1+t²)
+                     v' = v + v × t ẑ      →  v'x = vx + vy·t ,  v'y = vy − vx·t
+                     v⁺ = v + v' × s ẑ     →  vx⁺ = vx + v'y·s ,  vy⁺ = vy − v'x·s
+          This is an exact rotation of v → |v| is conserved to machine precision, no energy drift.
+       4. drift the other half step   x ← x + v⁺·dt/2                                            */
+        function borisStep(p, gens, dt) {
+          const h = 0.5 * dt;
+          p.x += p.vx * h;
+          p.y += p.vy * h;
+          const bz = bzAt(gens, p.x, p.y);
+          p.bz = bz;
+          const t = (p.q / p.m) * bz * h;
+          const s = (2 * t) / (1 + t * t);
+          const vpx = p.vx + p.vy * t;
+          const vpy = p.vy - p.vx * t;
+          p.vx = p.vx + vpy * s;
+          p.vy = p.vy - vpx * s;
+          p.x += p.vx * h;
+          p.y += p.vy * h;
+        }
+
+        // ---------- self tests (Tests A–F from the spec, plus extras) ----------
+        function bigField(B) {
+          return [
+            { x: 0, y: 0, R: 1e6, dir: B >= 0 ? 1 : -1, strength: Math.abs(B) },
+          ];
+        }
+        function orbit(q, m, vx, vy, B, T, dt, cb) {
+          const gens = bigField(B),
+            p = { x: 0, y: 0, vx, vy, q, m, bz: 0 },
+            n = Math.round(T / dt);
+          for (let i = 0; i < n; i++) {
+            borisStep(p, gens, dt);
+            if (cb) cb(p, i);
+          }
+          return p;
+        }
+        function measureRadius(q, m, v, B) {
+          // diameter = max(y) − min(y) over one full orbit
+          const Tc = (2 * Math.PI * m) / (Math.abs(q) * Math.abs(B));
+          let lo = 0,
+            hi = 0;
+          orbit(q, m, v, 0, B, Tc, 0.001, (p) => {
+            if (p.y < lo) lo = p.y;
+            if (p.y > hi) hi = p.y;
+          });
+          return (hi - lo) / 2;
+        }
+        function runTests() {
+          const R = [],
+            f = (v, d) => v.toFixed(d);
+          const add = (id, name, pass, detail) =>
+            R.push({ id, name, pass, detail });
+          // A: + charge, moving +x, B out (+) → must curve DOWN (−y). Also check the quarter-orbit position (r, −r).
+          {
+            const r = (1 * 5) / (1 * 2),
+              Tc = (2 * Math.PI) / 2;
+            const a = orbit(1, 1, 5, 0, +2, 0.1, DT),
+              q = orbit(1, 1, 5, 0, +2, Tc / 4, DT);
+            const ok =
+              a.vy < 0 &&
+              a.y < 0 &&
+              Math.abs(q.x - r) < 0.01 * r &&
+              Math.abs(q.y + r) < 0.01 * r;
+            add(
+              "A",
+              "Positive charge, +x velocity, B out of screen → curves downward",
+              ok,
+              `after 0.1 s: y=${f(a.y, 4)} m, vy=${f(
+                a.vy,
+                3
+              )} m/s; quarter orbit at (${f(q.x, 3)}, ${f(
+                q.y,
+                3
+              )}), expected (${f(r, 3)}, ${f(-r, 3)})`
+            );
+          }
+          {
+            const b = orbit(1, 1, 5, 0, -2, 0.1, DT);
+            add(
+              "B",
+              "Reverse the field (B into screen) → curves upward",
+              b.vy > 0 && b.y > 0,
+              `after 0.1 s: y=${f(b.y, 4)} m, vy=${f(b.vy, 3)} m/s`
+            );
+          }
+          {
+            const c = orbit(-1, 1, 5, 0, +2, 0.1, DT);
+            add(
+              "C",
+              "Reverse the charge (B unchanged) → curvature reverses",
+              c.vy > 0 && c.y > 0,
+              `after 0.1 s: y=${f(c.y, 4)} m, vy=${f(c.vy, 3)} m/s`
+            );
+          }
+          {
+            const r2 = measureRadius(1, 1, 5, 2),
+              r4 = measureRadius(1, 1, 5, 4),
+              rv = measureRadius(1, 1, 10, 2);
+            const ratio = r2 / r4,
+              ok =
+                Math.abs(ratio - 2) < 0.01 &&
+                Math.abs(r2 - 2.5) < 0.0125 &&
+                Math.abs(rv / r2 - 2) < 0.01;
+            add(
+              "D",
+              "Doubling B halves the cyclotron radius (and doubling v doubles it)",
+              ok,
+              `r(B=2)=${f(r2, 4)} m, r(B=4)=${f(r4, 4)} m, ratio=${f(
+                ratio,
+                4
+              )} (expect 2); r(v=10,B=2)=${f(
+                rv,
+                4
+              )} m (expect 5); analytic mv/qB = 2.5 m`
+            );
+          }
+          {
+            const v0 = 5;
+            let worst = 0;
+            orbit(1, 1, v0, 0, 2, 30, DT, (p) => {
+              const e = Math.abs(Math.hypot(p.vx, p.vy) - v0) / v0;
+              if (e > worst) worst = e;
+            });
+            add(
+              "E",
+              "Speed / kinetic energy constant in a static magnetic field (30 s, 30 000 steps)",
+              worst < 1e-9,
+              `max |Δv|/v = ${worst.toExponential(2)}`
+            );
+          }
+          {
+            const gens = [
+              { x: -0.5, y: 0, R: 3, dir: 1, strength: 2 },
+              { x: 0.5, y: 0, R: 3, dir: -1, strength: 2 },
+            ];
+            let maxB = 0;
+            for (const [x, y] of [
+              [0, 0],
+              [0.3, 0.4],
+              [-0.4, -0.7],
+              [0, 1.5],
+              [0.1, -2],
+            ])
+              maxB = Math.max(maxB, Math.abs(bzAt(gens, x, y)));
+            const left = bzAt(gens, -2.9, 0),
+              right = bzAt(gens, 2.9, 0);
+            const p = {
+              x: 0,
+              y: 0,
+              vx: 3 * Math.SQRT1_2,
+              vy: 3 * Math.SQRT1_2,
+              q: 1,
+              m: 1,
+              bz: 0,
+            };
+            let dev = 0;
+            for (let i = 0; i < 500; i++) {
+              borisStep(p, gens, DT);
+              dev = Math.max(dev, Math.abs(p.y - p.x));
+            }
+            add(
+              "F",
+              "Two equal & opposite overlapping fields → resultant B = 0 in the overlap (straight path)",
+              maxB === 0 && left === 2 && right === -2 && dev < 1e-12,
+              `max |B| in overlap = ${maxB} T; only-left region = ${left} T, only-right = ${right} T; path deviation = ${dev.toExponential(
+                1
+              )} m`
+            );
+          }
+          {
+            let worst = 0;
+            for (const [q, m, vx, vy, b] of [
+              [1, 1, 3, 4, 2],
+              [-2, 0.7, -1, 5, -3],
+              [0.5, 4, 8, -2, 1.3],
+            ]) {
+              const F = lorentz(q, vx, vy, b);
+              worst = Math.max(
+                worst,
+                Math.abs(F.fx * vx + F.fy * vy) /
+                  (Math.hypot(F.fx, F.fy) * Math.hypot(vx, vy) + 1e-30)
+              );
+            }
+            add(
+              "G",
+              "Magnetic force is always perpendicular to velocity (F·v = 0)",
+              worst < 1e-12,
+              `max |cos(angle between F and v)| = ${worst.toExponential(2)}`
+            );
+          }
+          return R;
+        }
+        return {
+          genB,
+          inside,
+          bzAt,
+          sources,
+          lorentz,
+          accel,
+          cyclotronRadius,
+          borisStep,
+          runTests,
+        };
+      })();
+
+      /* ------------------------------------------------------------------------------------
+   SIMULATION (one particle flying through one level + generator set)
+   status: flying → (dwell) → success | obstacle | escaped | timeout
+   After first touching the target the flight continues for ≤1 s (or until it leaves the target)
+   so that "accuracy" can be measured as the closest approach to the target centre.
+   `closest` tracks the nearest approach over the WHOLE flight (used for "you missed by …" feedback).
+   ------------------------------------------------------------------------------------ */
+      function hitsObstacle(level, x, y) {
+        for (const o of level.obstacles) {
+          if (o.r !== undefined) {
+            if (Math.hypot(x - o.x, y - o.y) < o.r + PR) return true;
+          } else {
+            const cx = Math.max(o.x, Math.min(x, o.x + o.w)),
+              cy = Math.max(o.y, Math.min(y, o.y + o.h));
+            if (Math.hypot(x - cx, y - cy) < PR) return true;
+          }
+        }
+        return false;
+      }
+
+      class Simulation {
+        constructor(level, gens, launch) {
+          this.level = level;
+          this.gens = gens.map((g) => ({
+            x: g.x,
+            y: g.y,
+            R: g.R,
+            dir: g.dir,
+            strength: g.strength,
+          })); // snapshot
+          const a = (launch.angle * Math.PI) / 180;
+          this.p = {
+            x: launch.x,
+            y: launch.y,
+            vx: launch.speed * Math.cos(a),
+            vy: launch.speed * Math.sin(a),
+            q: launch.sign * launch.qmag,
+            m: launch.mass,
+            bz: 0,
+          };
+          this.p.bz = Physics.bzAt(this.gens, this.p.x, this.p.y);
+          this.t = 0;
+          this.n = 0;
+          this.status = "flying";
+          this.trail = [[this.p.x, this.p.y]];
+          this.minD = Infinity;
+          this.tReach = null;
+          this.hitTime = null;
+          this.closest = Infinity;
+          this.closestPt = null;
+        }
+        get done() {
+          return this.status !== "flying" && this.status !== "dwell";
+        }
+        finish(s) {
+          this.status = s;
+          this.trail.push([this.p.x, this.p.y]);
+        }
+        step(dt) {
+          if (this.done) return;
+          const p = this.p,
+            L = this.level;
+          Physics.borisStep(p, this.gens, dt);
+          this.t += dt;
+          this.n++;
+          if (this.n % TRAIL_STRIDE === 0) this.trail.push([p.x, p.y]);
+          const dT = Math.hypot(p.x - L.target.x, p.y - L.target.y);
+          if (dT < this.closest) {
+            this.closest = dT;
+            this.closestPt = [p.x, p.y];
+          }
+          const crashed = hitsObstacle(L, p.x, p.y);
+          const gone = p.x < 0 || p.x > ARENA_W || p.y < 0 || p.y > ARENA_H;
+          if (this.status === "flying") {
+            if (crashed) this.finish("obstacle");
+            else if (gone) this.finish("escaped");
+            else if (dT <= L.target.r) {
+              this.status = "dwell";
+              this.hitTime = this.t;
+              this.tReach = this.t;
+              this.minD = dT;
+            } else if (this.t >= (L.timeLimit || 40)) this.finish("timeout");
+          } else if (this.status === "dwell") {
+            if (dT < this.minD) this.minD = dT;
+            if (
+              dT > L.target.r ||
+              this.t - this.hitTime >= 1.0 ||
+              crashed ||
+              gone
+            )
+              this.finish("success");
+          }
+        }
+        runToEnd(dt) {
+          dt = dt || DT;
+          let guard = 0;
+          while (!this.done && guard++ < 200000) this.step(dt);
+          return this;
+        }
+      }
+
+      /* Scoring: reach target (500) + generator economy (≤200) + speed (≤200) + accuracy (≤200).
+   Energy is deliberately NOT scored: a static B field does no work on the particle. */
+      function computeScore(level, gensUsed, sim, hintUsed) {
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+        const base = 500;
+        const genBonus = Math.round(
+          clamp(200 - 60 * Math.max(0, gensUsed - level.parGens), 0, 200)
+        );
+        const timeBonus = Math.round(
+          clamp(200 - 15 * Math.max(0, sim.tReach - level.parTime), 0, 200)
+        );
+        const acc = clamp(1 - sim.minD / level.target.r, 0, 1);
+        const accBonus = Math.round(200 * acc);
+        const penalty = hintUsed ? 150 : 0;
+        const total = Math.max(
+          0,
+          base + genBonus + timeBonus + accBonus - penalty
+        );
+        const stars = total >= 950 ? 3 : total >= 800 ? 2 : 1;
+        return {
+          base,
+          genBonus,
+          timeBonus,
+          accBonus,
+          acc,
+          penalty,
+          total,
+          stars,
+          gensUsed,
+          tReach: sim.tReach,
+        };
+      }
+
+      /* ------------------------------------------------------------------------------------
+   LEVELS  (units: metres, seconds, tesla, kilograms, coulombs; y is up)
+   launch : the FIXED particle for this level (the player cannot change it)
+   gens   : pre-placed generators (locked ones cannot be moved/edited/removed)
+   solution: reference answer used by the "Show solution" button and by the Node validation script.
+   ------------------------------------------------------------------------------------ */
+      const LEVELS = [
+        {
+          id: 1,
+          name: "First Deflection",
+          tag: "Meet • and ×",
+          brief:
+            "A positive charge flies to the right. A field pointing <b>out</b> of the screen (•) pushes it <b>down</b>; a field pointing <b>into</b> the screen (×) pushes it <b>up</b>. The target is above the particle's path.",
+          steps: [
+            "Press <b>＋ Field × (into)</b> — a field appears in the arena.",
+            "Drag it into the particle's path, then tune its strength and size with the sliders.",
+            "Press <b>LAUNCH</b> (the dashed line already predicts the path).",
+          ],
+          launch: {
+            x: 1.5,
+            y: 5,
+            angle: 0,
+            speed: 4,
+            sign: 1,
+            qmag: 1,
+            mass: 1,
+          },
+          target: { x: 6, y: 7, r: 0.6 },
+          obstacles: [],
+          gens: [],
+          maxGens: 1,
+          maxB: 5,
+          parGens: 1,
+          parTime: 2,
+          timeLimit: 30,
+          solution: { gens: [{ x: 7, y: 5, R: 3, dir: -1, strength: 2 }] },
+        },
+
+        {
+          id: 2,
+          name: "Reverse the Field",
+          tag: "Flip the polarity",
+          brief:
+            "This field curls the particle the <b>wrong way</b>: it pushes it down, but the target is above. Select the field and switch it from <b>•</b> to <b>×</b> — reversing <code>B</code> reverses the curvature. Then fine-tune its strength and position.",
+          tip: "There is a floor obstacle: a field that is too weak lets the particle crash into it.",
+          launch: {
+            x: 1.5,
+            y: 4,
+            angle: 0,
+            speed: 4,
+            sign: 1,
+            qmag: 1,
+            mass: 1,
+          },
+          target: { x: 6, y: 6, r: 0.6 },
+          obstacles: [{ x: 3.2, y: 0, w: 5.6, h: 0.8 }],
+          gens: [{ x: 6.5, y: 4, R: 2.5, dir: 1, strength: 2 }],
+          maxGens: 2,
+          maxB: 5,
+          parGens: 1,
+          parTime: 2,
+          timeLimit: 30,
+          solution: { gens: [{ x: 6.5, y: 4, R: 2.5, dir: -1, strength: 2 }] },
+        },
+
+        {
+          id: 3,
+          name: "Field Superposition",
+          tag: "B = B₁ + B₂ + …",
+          brief:
+            "Two <b>locked</b> stray fields (×) would bend the particle off course, but the only way to the target is the narrow tunnel. Where regions overlap, fields <b>add as vectors</b>: place • fields exactly on top of the locked ones with the same strength and the net field becomes <b>zero</b>, so the particle flies straight.",
+          tip: 'Watch the ○ marks and the "B = ΣBᵢ" line in Details: they show the resultant field.',
+          launch: {
+            x: 1.5,
+            y: 5,
+            angle: 0,
+            speed: 4,
+            sign: 1,
+            qmag: 1,
+            mass: 1,
+          },
+          target: { x: 14.7, y: 5, r: 0.6 },
+          obstacles: [
+            { x: 2.8, y: 5.7, w: 11.2, h: 4.3 },
+            { x: 2.8, y: 0, w: 11.2, h: 4.3 },
+          ],
+          gens: [
+            { x: 6, y: 5, R: 3, dir: -1, strength: 2, locked: true },
+            { x: 11.5, y: 5, R: 2.5, dir: -1, strength: 1.5, locked: true },
+          ],
+          maxGens: 5,
+          maxB: 5,
+          parGens: 4,
+          parTime: 4,
+          timeLimit: 30,
+          solution: {
+            gens: [
+              { x: 6, y: 5, R: 3, dir: 1, strength: 2 },
+              { x: 11.5, y: 5, R: 2.5, dir: 1, strength: 1.5 },
+            ],
+          },
+        },
+
+        {
+          id: 4,
+          name: "Precision Trajectory",
+          tag: "Tune strength & position",
+          brief:
+            "The particle leaves at a fixed 50°. Thread it through the gap above the wall, stay under the ceiling and land on the target. Small changes matter, so use the <b>− / +</b> buttons for fine steps. Remember <code>r = mv/(|q|B)</code>: a stronger field makes a tighter arc.",
+          launch: {
+            x: 1.5,
+            y: 2,
+            angle: 50,
+            speed: 5,
+            sign: 1,
+            qmag: 1,
+            mass: 1,
+          },
+          target: { x: 13.5, y: 2.2, r: 0.6 },
+          obstacles: [
+            { x: 6.2, y: 0, w: 0.8, h: 6 },
+            { x: 4, y: 8.4, w: 5.5, h: 1.6 },
+          ],
+          gens: [],
+          maxGens: 2,
+          maxB: 5,
+          parGens: 1,
+          parTime: 3.3,
+          timeLimit: 30,
+          solution: {
+            gens: [{ x: 7.6, y: 7.75, R: 3.6, dir: 1, strength: 1.3 }],
+          },
+        },
+
+        {
+          id: 5,
+          name: "Magnetic Architecture",
+          tag: "Design the route",
+          brief:
+            "A wall blocks the direct route and a pillar guards the target. Carry the particle <b>up and over the wall</b> and back down to the target. Combine several fields, let regions overlap to strengthen, weaken or cancel the field, and use both • and ×. Many layouts work.",
+          tip: "Think in arcs: × bends this particle up, • bends it down. Chain them like a roller coaster.",
+          launch: {
+            x: 1.5,
+            y: 5,
+            angle: 0,
+            speed: 5,
+            sign: 1,
+            qmag: 1,
+            mass: 1,
+          },
+          target: { x: 14.5, y: 5, r: 0.7 },
+          obstacles: [
+            { x: 7.4, y: 1.8, w: 0.8, h: 6.4 },
+            { x: 11, y: 5, r: 0.8 },
+          ],
+          gens: [],
+          maxGens: 6,
+          maxB: 5,
+          parGens: 4,
+          parTime: 3.4,
+          timeLimit: 40,
+          solution: {
+            gens: [
+              { x: 3, y: 7, R: 3.7, dir: -1, strength: 2.1 },
+              { x: 6.3, y: 7.8, R: 3, dir: 1, strength: 2.95 },
+              { x: 11, y: 7.4, R: 2.3, dir: 1, strength: 3.7 },
+              { x: 10.75, y: 7.2, R: 3.4, dir: -1, strength: 3.6 },
+            ],
+          },
+        },
+
+        {
+          id: 6,
+          name: "The Electron",
+          tag: "Negative charge",
+          brief:
+            "This particle is an <b>electron</b> (negative charge), so every force is <b>reversed</b>: here • (out) pushes a rightward-moving particle <b>up</b>, and × pushes it down. The target is above the pillar and under the ceiling.",
+          tip: "The Force arrow (pink) shows the push direction at every instant. It always points sideways to the velocity.",
+          launch: {
+            x: 1.5,
+            y: 3,
+            angle: 0,
+            speed: 4,
+            sign: -1,
+            qmag: 1,
+            mass: 1,
+          },
+          target: { x: 10, y: 7.2, r: 0.6 },
+          obstacles: [
+            { x: 4.5, y: 0, w: 1, h: 2.2 },
+            { x: 3, y: 8.8, w: 7, h: 1.2 },
+          ],
+          gens: [],
+          maxGens: 2,
+          maxB: 5,
+          parGens: 1,
+          parTime: 3,
+          timeLimit: 30,
+          solution: {
+            gens: [{ x: 9.38, y: 3.65, R: 1.61, dir: 1, strength: 1.86 }],
+          },
+        },
+
+        {
+          id: 7,
+          name: "Heavy Cargo",
+          tag: "Mass and radius",
+          brief:
+            "This particle is <b>4 kg</b> and fast, so it is hard to turn: <code>r = mv/(|q|B) = 20/B</code>. Even at the 5 T limit its turning radius is 4 m. Use a <b>wide, strong</b> field and place it well ahead of the pillar.",
+          tip: "The Particle card shows the turning-radius formula for this level.",
+          launch: {
+            x: 1.5,
+            y: 2,
+            angle: 0,
+            speed: 5,
+            sign: 1,
+            qmag: 1,
+            mass: 4,
+          },
+          target: { x: 12, y: 7.5, r: 0.7 },
+          obstacles: [{ x: 6, y: 3.6, w: 0.8, h: 3.2 }],
+          gens: [],
+          maxGens: 2,
+          maxB: 5,
+          parGens: 1,
+          parTime: 3,
+          timeLimit: 30,
+          solution: {
+            gens: [{ x: 9.29, y: 2.49, R: 2.88, dir: -1, strength: 3.89 }],
+          },
+        },
+
+        {
+          id: 8,
+          name: "Slalom",
+          tag: "Up, then down",
+          brief:
+            "Go <b>over</b> the first wall and <b>under</b> the second, then hit the target low on the right. Use × to bend the path up and • to bend it down. Overlapping fields add, so a big field can sit on top of a small one.",
+          tip: "Start with one field to clear the first wall, then add a second to bring the particle back down.",
+          launch: {
+            x: 1.5,
+            y: 4.5,
+            angle: 0,
+            speed: 5,
+            sign: 1,
+            qmag: 1,
+            mass: 1,
+          },
+          target: { x: 14.3, y: 1.8, r: 0.6 },
+          obstacles: [
+            { x: 5.2, y: 0, w: 0.8, h: 5.6 },
+            { x: 10, y: 4.6, w: 0.8, h: 5.4 },
+          ],
+          gens: [],
+          maxGens: 3,
+          maxB: 5,
+          parGens: 2,
+          parTime: 3,
+          timeLimit: 30,
+          solution: {
+            gens: [
+              { x: 3.15, y: 5.78, R: 1.55, dir: -1, strength: 2.31 },
+              { x: 4.13, y: 8.66, R: 3.46, dir: 1, strength: 3.06 },
+            ],
+          },
+        },
+
+        {
+          id: 9,
+          name: "Hairpin",
+          tag: "A full U-turn",
+          brief:
+            "The target sits <b>behind</b> a long wall, back near the start. Turn the particle through <b>180°</b>: let it run past the end of the wall, then bend it into a half circle so it comes back above the wall and flies straight to the target.",
+          tip: "A half circle needs a field wider than the circle itself. Aim for turning radius ≈ 2 m (B ≈ 2.5 T).",
+          launch: {
+            x: 1.5,
+            y: 2.8,
+            angle: 0,
+            speed: 5,
+            sign: 1,
+            qmag: 1,
+            mass: 1,
+          },
+          target: { x: 2, y: 7.5, r: 0.6 },
+          obstacles: [{ x: 0, y: 4.6, w: 10, h: 0.8 }],
+          gens: [],
+          maxGens: 2,
+          maxB: 5,
+          parGens: 1,
+          parTime: 4,
+          timeLimit: 30,
+          solution: {
+            gens: [{ x: 11.75, y: 4.78, R: 3.98, dir: -1, strength: 2.34 }],
+          },
+        },
+
+        {
+          id: 10,
+          name: "Grand Architect",
+          tag: "Final design challenge",
+          brief:
+            "A negative particle dives in diagonally. A <b>locked</b> × field near the start already bends it, two walls block the middle, and the target is in the far bottom-right corner. Design a field architecture with up to <b>5 fields</b>: use cancellation, chaining, both polarities.",
+          tip: "Plan the route first: which way does each arc need to bend? Remember: for this negative particle, • bends it the opposite way to a positive one.",
+          launch: {
+            x: 1.5,
+            y: 8.5,
+            angle: 340,
+            speed: 6,
+            sign: -1,
+            qmag: 1,
+            mass: 1,
+          },
+          target: { x: 14.4, y: 1.6, r: 0.8 },
+          obstacles: [
+            { x: 6.5, y: 3.6, w: 0.9, h: 6.4 },
+            { x: 10.5, y: 0, w: 0.9, h: 4.6 },
+          ],
+          gens: [{ x: 4, y: 6, R: 2.2, dir: -1, strength: 2.5, locked: true }],
+          maxGens: 5,
+          maxB: 5,
+          parGens: 4,
+          parTime: 3.5,
+          timeLimit: 40,
+          solution: {
+            gens: [
+              { x: 6.71, y: 8.28, R: 2.69, dir: 1, strength: 0.6 },
+              { x: 1.9, y: 0.85, R: 3.73, dir: 1, strength: 0.54 },
+              { x: 6.61, y: 4.37, R: 2.45, dir: 1, strength: 3.52 },
+              { x: 9.95, y: 5.85, R: 3.72, dir: -1, strength: 2.48 },
+            ],
+          },
+        },
+      ];
+      // ==== CORE END ====
+
+      // ==== UI BEGIN ====
+      (function () {
+        "use strict";
+        const $ = (id) => document.getElementById(id);
+        const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+        const TAU = Math.PI * 2;
+
+        /* ---------- local save (localStorage, with graceful fallback) ---------- */
+        const SAVE_KEY = "magneticArchitect.v2",
+          OLD_KEY = "magneticArchitect.v1";
+        let save = {
+          best: {},
+          layouts: {},
+          last: 0,
+          seenHelp: false,
+          speed: 1,
+          opt: { preview: true, intensity: true, vectors: true },
+        };
+        let storageOK = true;
+        (function readSave() {
+          try {
+            const s = localStorage.getItem(SAVE_KEY);
+            if (s) {
+              const o = JSON.parse(s) || {};
+              if (o.best && typeof o.best === "object") save.best = o.best;
+              if (o.layouts && typeof o.layouts === "object")
+                save.layouts = o.layouts;
+              if (Number.isInteger(o.last)) save.last = o.last;
+              save.seenHelp = !!o.seenHelp;
+              if (typeof o.speed === "number") save.speed = o.speed;
+              if (o.opt && typeof o.opt === "object")
+                Object.assign(save.opt, o.opt);
+            } else {
+              const old = localStorage.getItem(OLD_KEY); // migrate best scores from version 1
+              if (old) {
+                const o = JSON.parse(old);
+                if (o && o.best) save.best = o.best;
+              }
+            }
+          } catch (e) {
+            storageOK = false;
+          }
+        })();
+        function setSaveState(txt, cls) {
+          const e = $("saveState");
+          e.textContent = txt;
+          e.className = cls || "";
+        }
+        function persist() {
+          try {
+            localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+            if (storageOK) setSaveState("● saved", "ok");
+          } catch (e) {
+            storageOK = false;
+          }
+          if (!storageOK) setSaveState("not saving (storage blocked)", "bad");
+        }
+
+        const canvas = $("arena"),
+          ctx = canvas.getContext("2d");
+        const V = { w: 800, h: 500, s: 50, dpr: 1 };
+        const SX = (x) => x * V.s,
+          SY = (y) => (ARENA_H - y) * V.s;
+
+        const G = {
+          li: 0,
+          level: null,
+          gens: [],
+          nid: 1,
+          sel: null,
+          sim: null,
+          status: "idle",
+          acc: 0,
+          speedMul: 1,
+          ghost: null,
+          hint: false,
+          preview: null,
+          previewDirty: true,
+          fieldDirty: true,
+          drag: null,
+          hover: null,
+          opt: { intensity: true, vectors: true, preview: true },
+        };
+        const launchOf = () => G.level.launch;
+
+        /* ---------- slider rows (generator editor only — the particle is fixed) ---------- */
+        const SL = {
+          gStr: ["Strength |B|", 0.1, 5, 0.05, 2, " T"],
+          gRad: ["Radius R", 0.5, 4, 0.1, 1, " m"],
+          gX: ["Position x", 0, 16, 0.1, 1, " m"],
+          gY: ["Position y", 0, 10, 0.1, 1, " m"],
+        };
+        function rowHTML(id) {
+          const d = SL[id];
+          return (
+            `<div class="row"><label for="${id}">${d[0]}</label><output id="${id}Out"></output><div class="ctl">` +
+            `<button type="button" class="nudge" data-for="${id}" data-d="-1" aria-label="decrease ${d[0]}">−</button>` +
+            `<input type="range" id="${id}" min="${d[1]}" max="${d[2]}" step="${d[3]}">` +
+            `<button type="button" class="nudge" data-for="${id}" data-d="1" aria-label="increase ${d[0]}">+</button></div></div>`
+          );
+        }
+        $("genRows").innerHTML = ["gStr", "gRad", "gX", "gY"]
+          .map(rowHTML)
+          .join("");
+        function setSlider(id, v) {
+          const d = SL[id];
+          $(id).value = v;
+          $(id + "Out").textContent = Number(v).toFixed(d[4]) + d[5];
+        }
+        function bind(id, fn) {
+          $(id).addEventListener("input", (e) => {
+            const v = parseFloat(e.target.value);
+            $(id + "Out").textContent = v.toFixed(SL[id][4]) + SL[id][5];
+            fn(v);
+          });
+        }
+        $("genRows").addEventListener("click", (e) => {
+          const b = e.target.closest(".nudge");
+          if (!b || b.disabled) return;
+          const el = $(b.dataset.for),
+            st = parseFloat(el.step),
+            d = parseInt(b.dataset.d, 10);
+          const v = clamp(
+            Math.round((parseFloat(el.value) + d * st) / st) * st,
+            parseFloat(el.min),
+            parseFloat(el.max)
+          );
+          el.value = +v.toFixed(3);
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+
+        /* ---------- save helpers ---------- */
+        let saveTimer = 0;
+        function snapshotLayout() {
+          if (!G.level) return;
+          save.layouts[G.level.id] = {
+            hint: !!G.hint,
+            gens: G.gens
+              .filter((g) => !g.locked)
+              .map((g) => ({
+                x: g.x,
+                y: g.y,
+                R: g.R,
+                dir: g.dir,
+                strength: g.strength,
+              })),
+          };
+        }
+        function queueSave() {
+          clearTimeout(saveTimer);
+          saveTimer = setTimeout(() => {
+            saveTimer = 0;
+            snapshotLayout();
+            persist();
+          }, 250);
+        }
+        function flushSave() {
+          if (saveTimer) {
+            clearTimeout(saveTimer);
+            saveTimer = 0;
+            snapshotLayout();
+          }
+          persist();
+        }
+        window.addEventListener("beforeunload", flushSave);
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) flushSave();
+        });
+
+        function sanitizeGens(list, L) {
+          const out = [];
+          if (!Array.isArray(list)) return out;
+          for (const g of list) {
+            if (!g || ![g.x, g.y, g.R, g.strength].every(Number.isFinite))
+              continue;
+            out.push({
+              x: clamp(g.x, 0, ARENA_W),
+              y: clamp(g.y, 0, ARENA_H),
+              R: clamp(g.R, 0.5, 4),
+              dir: g.dir < 0 ? -1 : 1,
+              strength: clamp(g.strength, 0.1, L.maxB),
+            });
+          }
+          return out;
+        }
+
+        /* ---------- level loading / state ---------- */
+        function initialGens(L) {
+          return (L.gens || []).map((g) => ({
+            x: g.x,
+            y: g.y,
+            R: g.R,
+            dir: g.dir,
+            strength: g.strength,
+            locked: !!g.locked,
+          }));
+        }
+        function loadLevel(i) {
+          if (G.level) flushSave();
+          G.li = i;
+          const L = LEVELS[i];
+          G.level = L;
+          G.nid = 1;
+          const locked = initialGens(L).filter((g) => g.locked);
+          const saved = save.layouts[L.id];
+          let editable;
+          if (saved && Array.isArray(saved.gens)) {
+            editable = sanitizeGens(saved.gens, L);
+            G.hint = !!saved.hint;
+          } else {
+            editable = initialGens(L).filter((g) => !g.locked);
+            G.hint = false;
+          }
+          editable = editable.slice(0, Math.max(0, L.maxGens - locked.length));
+          G.gens = locked
+            .concat(editable)
+            .map((g) => Object.assign({ id: G.nid++, locked: false }, g));
+          G.ghost = null;
+          G.sim = null;
+          G.status = "idle";
+          G.acc = 0;
+          G.preview = null;
+          G.previewDirty = true;
+          G.fieldDirty = true;
+          G.sel = null;
+          save.last = i;
+          hideAll();
+          toast("");
+          $("gStr").max = L.maxB;
+          renderMission();
+          buildLevelBar();
+          renderParticle();
+          syncGenUI();
+          updateButtons();
+          persist();
+        }
+        function renderMission() {
+          const L = G.level,
+            b = save.best[L.id];
+          $(
+            "lvlTag"
+          ).textContent = `Level ${L.id} of ${LEVELS.length} · ${L.tag}`;
+          $("lvlName").textContent = L.name;
+          $("lvlBrief").innerHTML = L.brief;
+          const st = $("lvlSteps");
+          if (L.steps) {
+            st.innerHTML = L.steps.map((s) => `<li>${s}</li>`).join("");
+            st.classList.remove("hidden");
+          } else st.classList.add("hidden");
+          const tp = $("lvlTip");
+          if (L.tip) {
+            tp.innerHTML = "💡 " + L.tip;
+            tp.classList.remove("hidden");
+          } else tp.classList.add("hidden");
+          $("lvlStats").innerHTML =
+            `<span class="stat">Fields: <b>≤ ${L.maxGens}</b> (par ${
+              L.parGens
+            })</span><span class="stat">Par time: <b>${L.parTime.toFixed(
+              1
+            )} s</b></span>` +
+            `<span class="stat">Max field: <b>${
+              L.maxB
+            } T</b></span><span class="stat">Best: <b>${
+              b ? b.score + " pts · " + "★".repeat(b.stars) : "—"
+            }</b></span>`;
+        }
+        function renderParticle() {
+          const P = G.level.launch,
+            q = P.sign * P.qmag;
+          $("fixedGrid").innerHTML =
+            `<div><span>Charge</span><b style="color:${
+              q > 0 ? "var(--pos)" : "var(--neg)"
+            }">${q > 0 ? "+" : "−"}${P.qmag.toFixed(1)} C</b></div>` +
+            `<div><span>Mass</span><b>${P.mass.toFixed(
+              1
+            )} kg</b></div><div><span>Speed</span><b>${P.speed.toFixed(
+              1
+            )} m/s</b></div>` +
+            `<div><span>Launch angle</span><b>${P.angle.toFixed(
+              0
+            )}°</b></div><div><span>Start</span><b>(${P.x.toFixed(
+              1
+            )}, ${P.y.toFixed(1)}) m</b></div>` +
+            `<div><span>Push on it</span><b>${
+              q > 0 ? "• down · × up*" : "• up · × down*"
+            }</b></div>`;
+          const k = (P.mass * P.speed) / P.qmag;
+          $(
+            "turnNote"
+          ).innerHTML = `Turning radius: <b style="color:#fff">r = ${k.toFixed(
+            1
+          )} m ÷ B(T)</b> — e.g. 2 T → ${(k / 2).toFixed(
+            2
+          )} m. <span style="opacity:.8">*for motion to the right.</span>`;
+        }
+        function buildLevelBar() {
+          const bar = $("levels");
+          bar.innerHTML = "";
+          let done = 0,
+            total = 0;
+          LEVELS.forEach((L, i) => {
+            const b = document.createElement("button"),
+              bs = save.best[L.id];
+            b.className =
+              "lvl" + (i === G.li ? " active" : "") + (bs ? " done" : "");
+            const st = bs
+              ? "★".repeat(bs.stars) + "☆".repeat(3 - bs.stars)
+              : "☆☆☆";
+            b.innerHTML = `<b>${L.id}</b><i>${st}</i>`;
+            b.title = `Level ${L.id}: ${L.name}`;
+            b.onclick = () => loadLevel(i);
+            bar.appendChild(b);
+            if (bs) {
+              done++;
+              total += bs.score;
+            }
+          });
+          $(
+            "prog"
+          ).innerHTML = `<b>${done}</b> / ${LEVELS.length} solved · <b>${total}</b> pts`;
+          const act = bar.querySelector(".active");
+          if (act && act.scrollIntoView) {
+            try {
+              act.scrollIntoView({ block: "nearest", inline: "nearest" });
+            } catch (e) {}
+          }
+        }
+        const selGen = () => G.gens.find((g) => g.id === G.sel) || null;
+        const editableCount = () => G.gens.filter((g) => !g.locked).length;
+        function syncGenUI() {
+          const L = G.level;
+          $("genCount").textContent = `${G.gens.length} / ${L.maxGens} used`;
+          $("addOut").disabled = $("addIn").disabled =
+            G.gens.length >= L.maxGens;
+          $("genList").innerHTML = G.gens.length
+            ? G.gens
+                .map(
+                  (g, i) =>
+                    `<button class="gitem ${g.dir > 0 ? "out" : "in"} ${
+                      g.id === G.sel ? "sel" : ""
+                    }" data-id="${g.id}"><span class="sym">${
+                      g.dir > 0 ? "•" : "×"
+                    }</span>` +
+                    `<span class="gname">Field ${i + 1}</span>${
+                      g.locked ? '<span class="lk">locked</span>' : ""
+                    }` +
+                    `<span class="gmeta">${
+                      g.dir > 0 ? "out" : "into"
+                    } · ${g.strength.toFixed(2)} T · R ${g.R.toFixed(
+                      1
+                    )} m</span></button>`
+                )
+                .join("")
+            : '<div class="empty">No fields yet. Add one with the buttons above, then press LAUNCH.</div>';
+          const g = selGen();
+          $("genEditor").classList.toggle("hidden", !g);
+          $("genHelp").classList.toggle("hidden", !!g);
+          $("btnRestart").disabled = false;
+          if (g) {
+            const idx = G.gens.indexOf(g) + 1;
+            $("edTitle").textContent = `Editing Field ${idx}`;
+            $("edLock").textContent = g.locked
+              ? "Locked — cancel it with your own fields."
+              : "";
+            for (const b of $("segDir").children) {
+              b.classList.toggle("active", +b.dataset.dir === g.dir);
+              b.disabled = g.locked;
+            }
+            setSlider("gStr", g.strength);
+            setSlider("gRad", g.R);
+            setSlider("gX", g.x);
+            setSlider("gY", g.y);
+            for (const id of ["gStr", "gRad", "gX", "gY"]) {
+              $(id).disabled = g.locked;
+            }
+            for (const n of $("genRows").querySelectorAll(".nudge"))
+              n.disabled = g.locked;
+            $("gDel").disabled = g.locked;
+          }
+        }
+        function refreshListOnly() {
+          // cheap update while a slider is dragged (keeps the slider element alive)
+          const items = $("genList").querySelectorAll(".gitem");
+          G.gens.forEach((g, i) => {
+            const it = items[i];
+            if (!it) return;
+            it.className = `gitem ${g.dir > 0 ? "out" : "in"} ${
+              g.id === G.sel ? "sel" : ""
+            }`;
+            it.querySelector(".sym").textContent = g.dir > 0 ? "•" : "×";
+            it.querySelector(".gmeta").textContent = `${
+              g.dir > 0 ? "out" : "into"
+            } · ${g.strength.toFixed(2)} T · R ${g.R.toFixed(1)} m`;
+          });
+        }
+        function changed() {
+          // any field edit: stop the run (keeps a ghost of the last attempt) and queue a save
+          if (G.status !== "idle") resetSim();
+          G.fieldDirty = true;
+          G.previewDirty = true;
+          G.preview = null;
+          queueSave();
+        }
+        function updateButtons() {
+          const active = G.status === "running" || G.status === "paused";
+          $("btnPause").disabled = !active;
+          $("btnStop").disabled = G.status === "idle";
+          $("btnPause").textContent =
+            G.status === "paused" ? "Resume" : "Pause";
+          $("btnLaunch").textContent =
+            G.status === "idle" ? "▶ LAUNCH" : "↻ RELAUNCH";
+          const chip = $("chip");
+          chip.className = "";
+          let txt = "READY";
+          if (G.status === "running") {
+            txt = "RUNNING";
+            chip.className = "running";
+          } else if (G.status === "paused") {
+            txt = "PAUSED";
+            chip.className = "paused";
+          } else if (G.status === "done" && G.sim) {
+            if (G.sim.status === "success") {
+              txt = "TARGET HIT";
+              chip.className = "success";
+            } else {
+              txt = {
+                obstacle: "HIT OBSTACLE",
+                escaped: "LEFT ARENA",
+                timeout: "TIMED OUT",
+              }[G.sim.status];
+              chip.className = "fail";
+            }
+          }
+          chip.textContent = txt;
+        }
+        let toastTimer = 0;
+        function toast(msg, info) {
+          const t = $("toast");
+          clearTimeout(toastTimer);
+          if (!msg) {
+            t.classList.remove("show");
+            return;
+          }
+          t.textContent = msg;
+          t.classList.toggle("info", !!info);
+          t.classList.add("show");
+          toastTimer = setTimeout(() => t.classList.remove("show"), 4200);
+        }
+        function hideAll() {
+          $("result").classList.add("hidden");
+          $("tests").classList.add("hidden");
+          $("help").classList.add("hidden");
+        }
+        function armed(btn, armedLabel, fn) {
+          // two-click confirmation without window.confirm
+          const orig = btn.dataset.label || btn.textContent;
+          btn.dataset.label = orig;
+          if (btn.classList.contains("armed")) {
+            btn.classList.remove("armed");
+            btn.textContent = orig;
+            clearTimeout(btn._t);
+            fn();
+            return;
+          }
+          btn.classList.add("armed");
+          btn.textContent = armedLabel;
+          btn._t = setTimeout(() => {
+            btn.classList.remove("armed");
+            btn.textContent = orig;
+          }, 3500);
+        }
+
+        /* ---------- simulation control ---------- */
+        function resetSim() {
+          if (G.sim && G.sim.trail.length > 4) G.ghost = G.sim.trail.slice();
+          G.sim = null;
+          G.status = "idle";
+          G.acc = 0;
+          $("result").classList.add("hidden");
+          updateButtons();
+        }
+        function launchSim() {
+          if (G.status !== "idle") resetSim();
+          G.sim = new Simulation(G.level, G.gens, launchOf());
+          G.acc = 0;
+          G.status = "running";
+          toast("");
+          updateButtons();
+        }
+        function togglePause() {
+          if (G.status === "running") G.status = "paused";
+          else if (G.status === "paused") G.status = "running";
+          updateButtons();
+        }
+        function onSimDone() {
+          G.status = "done";
+          const s = G.sim;
+          if (s.status === "success") {
+            const sc = computeScore(G.level, G.gens.length, s, G.hint);
+            const prev = save.best[G.level.id];
+            if (!prev || sc.total > prev.score)
+              save.best[G.level.id] = { score: sc.total, stars: sc.stars };
+            snapshotLayout();
+            persist();
+            renderMission();
+            buildLevelBar();
+            showResult(sc);
+          } else {
+            const msg = {
+              obstacle: "The particle hit an obstacle.",
+              escaped: "The particle left the arena.",
+              timeout: "Time limit reached before the target.",
+            }[s.status];
+            toast(
+              `${msg} Closest approach: ${s.closest.toFixed(
+                1
+              )} m from the target centre. Adjust your fields and relaunch.`
+            );
+          }
+          updateButtons();
+        }
+        function showResult(sc) {
+          const last = G.li >= LEVELS.length - 1,
+            all = LEVELS.every((l) => save.best[l.id]);
+          $("resultBox").innerHTML = `<h3>${
+            G.level.name
+          } — target reached!</h3><div class="stars">${"★".repeat(
+            sc.stars
+          )}${"☆".repeat(3 - sc.stars)}</div>
+    <table><tr><td>Reached the target</td><td>+${sc.base}</td></tr>
+    <tr><td>Fields used: ${sc.gensUsed} (par ${G.level.parGens})</td><td>+${
+            sc.genBonus
+          }</td></tr>
+    <tr><td>Time: ${sc.tReach.toFixed(2)} s (par ${G.level.parTime.toFixed(
+            1
+          )} s)</td><td>+${sc.timeBonus}</td></tr>
+    <tr><td>Accuracy: ${(sc.acc * 100).toFixed(
+      0
+    )}% (closest to centre)</td><td>+${sc.accBonus}</td></tr>
+    ${
+      sc.penalty
+        ? `<tr><td>Solution shown</td><td>−${sc.penalty}</td></tr>`
+        : ""
+    }
+    <tr class="tot"><td>Score</td><td>${sc.total}</td></tr></table>
+    <div class="note" style="margin:0 0 10px">${
+      all && last ? "🏆 All levels solved! " : ""
+    }Progress saved. Energy is not scored: a static magnetic field does no work, so kinetic energy never changes.</div>
+    <div class="btns"><button class="btn" id="rRetry">Keep tweaking</button><button class="btn primary" id="rNext">${
+      last ? "Back to level 1" : "Next level ▶"
+    }</button></div>`;
+          $("result").classList.remove("hidden");
+          $("rRetry").onclick = () => $("result").classList.add("hidden");
+          $("rNext").onclick = () => loadLevel(last ? 0 : G.li + 1);
+        }
+
+        /* ---------- generators ---------- */
+        function addGen(dir) {
+          const L = G.level;
+          if (G.gens.length >= L.maxGens) {
+            toast(
+              "Field limit reached (" + L.maxGens + "). Delete one first.",
+              true
+            );
+            return;
+          }
+          const k = editableCount(),
+            S = L.launch,
+            T = L.target;
+          const dx = [0, 2.2, -2.2][k % 3],
+            dy = k === 0 ? 0 : k % 2 ? 1.6 : -1.6; // first field sits midway; later ones fan out
+          const g = {
+            id: G.nid++,
+            x: clamp((S.x + T.x) / 2 + dx, 1, 15),
+            y: clamp((S.y + T.y) / 2 + dy, 1, 9),
+            R: 2,
+            dir,
+            strength: Math.min(2, L.maxB),
+            locked: false,
+          };
+          G.gens.push(g);
+          G.sel = g.id;
+          changed();
+          syncGenUI();
+        }
+        function deleteSel() {
+          const g = selGen();
+          if (!g || g.locked) return;
+          G.gens = G.gens.filter((x) => x !== g);
+          G.sel = null;
+          changed();
+          syncGenUI();
+        }
+        function restartLevel() {
+          const L = G.level;
+          G.gens = initialGens(L).map((g) => Object.assign({ id: G.nid++ }, g));
+          G.hint = false;
+          G.sel = null;
+          G.ghost = null;
+          changed();
+          syncGenUI();
+          toast("Fields reset to the level's starting layout.", true);
+        }
+
+        /* ---------- control wiring ---------- */
+        $("btnLaunch").onclick = launchSim;
+        $("btnPause").onclick = togglePause;
+        $("btnStop").onclick = () => {
+          resetSim();
+        };
+        $("selSpeed").onchange = (e) => {
+          G.speedMul = parseFloat(e.target.value);
+          save.speed = G.speedMul;
+          queueSave();
+        };
+        $("addOut").onclick = () => addGen(1);
+        $("addIn").onclick = () => addGen(-1);
+        $("gDel").onclick = deleteSel;
+        $("btnRestart").onclick = () =>
+          armed($("btnRestart"), "Click again to confirm", restartLevel);
+        $("optIntensity").onchange = (e) => {
+          G.opt.intensity = e.target.checked;
+          save.opt.intensity = G.opt.intensity;
+          queueSave();
+        };
+        $("optVectors").onchange = (e) => {
+          G.opt.vectors = e.target.checked;
+          save.opt.vectors = G.opt.vectors;
+          queueSave();
+        };
+        $("optPreview").onchange = (e) => {
+          G.opt.preview = e.target.checked;
+          G.previewDirty = true;
+          save.opt.preview = G.opt.preview;
+          queueSave();
+        };
+        $("btnHint").onclick = () =>
+          armed($("btnHint"), "Click again: −150 pts", () => {
+            const L = G.level;
+            G.hint = true;
+            G.gens = G.gens.filter((g) => g.locked);
+            for (const s of L.solution.gens)
+              G.gens.push({
+                id: G.nid++,
+                x: s.x,
+                y: s.y,
+                R: s.R,
+                dir: s.dir,
+                strength: s.strength,
+                locked: false,
+              });
+            G.sel = null;
+            changed();
+            syncGenUI();
+            toast(
+              "Reference solution loaded (−150 pts). Press LAUNCH — or tweak it!",
+              true
+            );
+          });
+        $("segDir").addEventListener("click", (e) => {
+          const b = e.target.closest("button"),
+            g = selGen();
+          if (!b || !g || g.locked) return;
+          g.dir = +b.dataset.dir;
+          changed();
+          syncGenUI();
+        });
+        $("genList").addEventListener("click", (e) => {
+          const b = e.target.closest(".gitem");
+          if (!b) return;
+          G.sel = +b.dataset.id;
+          syncGenUI();
+        });
+        bind("gStr", (v) => {
+          const g = selGen();
+          if (g && !g.locked) {
+            g.strength = v;
+            changed();
+            refreshListOnly();
+          }
+        });
+        bind("gRad", (v) => {
+          const g = selGen();
+          if (g && !g.locked) {
+            g.R = v;
+            changed();
+            refreshListOnly();
+          }
+        });
+        bind("gX", (v) => {
+          const g = selGen();
+          if (g && !g.locked) {
+            g.x = v;
+            changed();
+          }
+        });
+        bind("gY", (v) => {
+          const g = selGen();
+          if (g && !g.locked) {
+            g.y = v;
+            changed();
+          }
+        });
+        $("btnTests").onclick = showTests;
+        function showTests() {
+          const res = Physics.runTests();
+          $("testsBox").innerHTML =
+            `<h3>Physics validation</h3><div class="note" style="margin:0 0 8px">Boris integrator, dt = ${
+              DT * 1000
+            } ms, run live in your browser.</div>` +
+            res
+              .map(
+                (r) =>
+                  `<div class="testrow"><span class="${r.pass ? "ok" : "no"}">${
+                    r.pass ? "✔" : "✘"
+                  }</span><div><b>Test ${r.id}</b> — ${r.name}<small>${
+                    r.detail
+                  }</small></div></div>`
+              )
+              .join("") +
+            `<div class="btns" style="margin-top:12px"><button class="btn primary" id="tClose">Close</button></div>`;
+          $("tests").classList.remove("hidden");
+          $("tClose").onclick = () => $("tests").classList.add("hidden");
+        }
+        function showHelp() {
+          $("helpBox").innerHTML = `<h3>How to play</h3>
+    <div class="note" style="margin:0 0 6px">The particle is fixed in every level — <b style="color:#fff">you only design the magnetic fields.</b></div>
+    <ol>
+      <li><b>Add a field</b> with <b>＋ Field •</b> or <b>＋ Field ×</b>.</li>
+      <li><b>Place and tune it:</b> drag it in the arena, drag its white rim handle to resize it, or use the sliders (− / + for fine steps).</li>
+      <li>Press <b>▶ LAUNCH</b>. The dashed line shows the predicted path. Hit the green target, avoid the red obstacles.</li>
+    </ol>
+    <div class="rule"><b class="o">• Out of the screen</b> and <b class="i">× into the screen</b>: for a <b>positive</b> charge moving right, • pushes it <b>down</b> and × pushes it <b>up</b>. A <b>negative</b> charge is pushed the opposite way.</div>
+    <div class="rule">A stronger field (or a lighter, slower particle) turns tighter: <b>r = m·v / (|q|·B)</b>. Where fields overlap they <b>add</b>; equal • and × cancel to zero.</div>
+    <div class="note">Your layouts, scores and settings are saved automatically in this browser.</div>
+    <div class="btns" style="margin-top:12px"><button class="btn primary" id="hClose">Got it</button></div>`;
+          $("help").classList.remove("hidden");
+          $("hClose").onclick = () => {
+            $("help").classList.add("hidden");
+            save.seenHelp = true;
+            persist();
+          };
+        }
+        $("btnHelp").onclick = showHelp;
+        $("btnWipe").onclick = () =>
+          armed($("btnWipe"), "Click again to erase everything", () => {
+            save.best = {};
+            save.layouts = {};
+            save.last = 0;
+            persist();
+            loadLevel(0);
+            toast("All saved progress erased.", true);
+          });
+        for (const id of ["result", "tests", "help"])
+          $(id).addEventListener("click", (e) => {
+            if (e.target === $(id)) {
+              $(id).classList.add("hidden");
+              if (id === "help") {
+                save.seenHelp = true;
+                persist();
+              }
+            }
+          });
+
+        window.addEventListener("keydown", (e) => {
+          const tg = e.target.tagName;
+          if (e.key === "Escape") {
+            hideAll();
+            return;
+          }
+          if (
+            tg === "SELECT" ||
+            tg === "TEXTAREA" ||
+            (tg === "INPUT" &&
+              e.target.type !== "range" &&
+              e.target.type !== "checkbox")
+          )
+            return;
+          if (e.code === "Space") {
+            if (tg === "BUTTON") return;
+            e.preventDefault();
+            if (G.status === "running" || G.status === "paused") togglePause();
+            else launchSim();
+          } else if (e.key === "r" || e.key === "R") {
+            resetSim();
+          } else if (e.key === "Delete" || e.key === "Backspace") {
+            if (tg !== "INPUT") deleteSel();
+          } else if (e.key.startsWith("Arrow") && tg !== "INPUT") {
+            const g = selGen();
+            if (!g || g.locked) return;
+            e.preventDefault();
+            const st = e.shiftKey ? 0.5 : 0.1;
+            if (e.key === "ArrowLeft") g.x -= st;
+            if (e.key === "ArrowRight") g.x += st;
+            if (e.key === "ArrowUp") g.y += st;
+            if (e.key === "ArrowDown") g.y -= st;
+            g.x = clamp(+g.x.toFixed(2), 0, ARENA_W);
+            g.y = clamp(+g.y.toFixed(2), 0, ARENA_H);
+            changed();
+            setSlider("gX", g.x);
+            setSlider("gY", g.y);
+          }
+        });
+
+        /* ---------- pointer interaction (drag fields, resize via rim handle) ---------- */
+        function toWorld(e) {
+          const r = canvas.getBoundingClientRect();
+          return {
+            x: ((e.clientX - r.left) / r.width) * ARENA_W,
+            y: ARENA_H - ((e.clientY - r.top) / r.height) * ARENA_H,
+          };
+        }
+        const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+        function rimHandle(g) {
+          return { x: g.x + g.R <= 15.5 ? g.x + g.R : g.x - g.R, y: g.y };
+        }
+        function hitTest(w) {
+          const tol = Math.max(0.3, 14 / V.s);
+          const g0 = selGen();
+          if (g0 && !g0.locked && dist(w, rimHandle(g0)) < tol)
+            return { kind: "resize", id: g0.id };
+          let best = null,
+            bd = 1e9;
+          for (const g of G.gens) {
+            const d = dist(w, g);
+            if (d < g.R && d / g.R < bd) {
+              bd = d / g.R;
+              best = g;
+            }
+          }
+          if (best)
+            return {
+              kind: "gen",
+              id: best.id,
+              ox: best.x - w.x,
+              oy: best.y - w.y,
+            };
+          return null;
+        }
+        canvas.addEventListener("pointerdown", (e) => {
+          const w = toWorld(e),
+            h = hitTest(w);
+          if (!h) {
+            if (G.sel !== null) {
+              G.sel = null;
+              syncGenUI();
+            }
+            return;
+          }
+          canvas.setPointerCapture(e.pointerId);
+          G.drag = h;
+          if (G.sel !== h.id) {
+            G.sel = h.id;
+            syncGenUI();
+          }
+          const g = G.gens.find((x) => x.id === h.id);
+          if (g && g.locked)
+            toast(
+              "This field is locked. Cancel it by overlapping your own fields.",
+              true
+            );
+        });
+        canvas.addEventListener("pointermove", (e) => {
+          const w = toWorld(e);
+          G.hover = w;
+          const d = G.drag;
+          if (!d) {
+            const h = hitTest(w);
+            canvas.style.cursor = !h
+              ? "default"
+              : h.kind === "resize"
+              ? "ew-resize"
+              : (G.gens.find((g) => g.id === h.id) || {}).locked
+              ? "not-allowed"
+              : "grab";
+            return;
+          }
+          const g = G.gens.find((x) => x.id === d.id);
+          if (!g || g.locked) return;
+          if (d.kind === "gen") {
+            const nx = clamp(Math.round((w.x + d.ox) * 20) / 20, 0, ARENA_W),
+              ny = clamp(Math.round((w.y + d.oy) * 20) / 20, 0, ARENA_H);
+            if (nx !== g.x || ny !== g.y) {
+              g.x = nx;
+              g.y = ny;
+              changed();
+              setSlider("gX", nx);
+              setSlider("gY", ny);
+            }
+          } else if (d.kind === "resize") {
+            const R = clamp(Math.round(dist(w, g) * 10) / 10, 0.5, 4);
+            if (R !== g.R) {
+              g.R = R;
+              changed();
+              setSlider("gRad", R);
+              refreshListOnly();
+            }
+          }
+        });
+        const endDrag = (e) => {
+          if (G.drag) {
+            G.drag = null;
+          }
+          try {
+            canvas.releasePointerCapture(e.pointerId);
+          } catch (_) {}
+        };
+        canvas.addEventListener("pointerup", endDrag);
+        canvas.addEventListener("pointercancel", endDrag);
+        canvas.addEventListener("pointerleave", () => {
+          if (!G.drag) G.hover = null;
+        });
+
+        /* ---------- layout ---------- */
+        function resize() {
+          const wrap = $("stageWrap");
+          let w = wrap.clientWidth || 800;
+          if (window.innerWidth >= 960)
+            w = Math.min(w, Math.max(480, window.innerHeight - 230) * 1.6);
+          w = Math.max(280, Math.floor(w));
+          const h = Math.round(w / 1.6);
+          V.dpr = Math.min(2.5, window.devicePixelRatio || 1);
+          V.w = w;
+          V.h = h;
+          V.s = w / ARENA_W;
+          canvas.style.width = w + "px";
+          canvas.style.height = h + "px";
+          canvas.width = Math.round(w * V.dpr);
+          canvas.height = Math.round(h * V.dpr);
+          $("stage").style.width = w + "px";
+        }
+        window.addEventListener("resize", resize);
+        if (window.ResizeObserver)
+          new ResizeObserver(() => {
+            const w = $("stageWrap").clientWidth;
+            const cur = parseFloat($("stage").style.width) || 0;
+            if (w < cur || Math.abs(w - cur) > 40) resize();
+          }).observe($("stageWrap"));
+
+        /* ---------- rendering (never touches physics state) ---------- */
+        const FW = 240,
+          FH = 150,
+          FC = document.createElement("canvas");
+        FC.width = FW;
+        FC.height = FH;
+        const fctx = FC.getContext("2d"),
+          fimg = fctx.createImageData(FW, FH);
+        function rebuildField() {
+          const d = fimg.data;
+          for (let j = 0; j < FH; j++) {
+            const y = ARENA_H - ((j + 0.5) * ARENA_H) / FH;
+            for (let i = 0; i < FW; i++) {
+              const x = ((i + 0.5) * ARENA_W) / FW,
+                b = Physics.bzAt(G.gens, x, y),
+                k = (j * FW + i) * 4;
+              if (Math.abs(b) < 1e-9) {
+                d[k + 3] = 0;
+                continue;
+              }
+              const a = Math.min(0.5, 0.1 + 0.075 * Math.abs(b));
+              if (b > 0) {
+                d[k] = 76;
+                d[k + 1] = 201;
+                d[k + 2] = 240;
+              } else {
+                d[k] = 255;
+                d[k + 1] = 123;
+                d[k + 2] = 84;
+              }
+              d[k + 3] = Math.round(a * 255);
+            }
+          }
+          fctx.putImageData(fimg, 0, 0);
+        }
+        const hatch = (() => {
+          const c = document.createElement("canvas");
+          c.width = c.height = 12;
+          const x = c.getContext("2d");
+          x.strokeStyle = "rgba(255,90,110,.55)";
+          x.lineWidth = 2;
+          x.beginPath();
+          x.moveTo(-2, 14);
+          x.lineTo(14, -2);
+          x.moveTo(-2, 8);
+          x.lineTo(8, -2);
+          x.moveTo(4, 14);
+          x.lineTo(14, 4);
+          x.stroke();
+          return c;
+        })();
+        const COL = {
+          out: "76,201,240",
+          in: "255,123,84",
+          pos: "255,209,102",
+          neg: "199,125,255",
+        };
+        const font = (px, w) =>
+          `${w || 500} ${Math.max(
+            9,
+            px
+          )}px ui-monospace,SFMono-Regular,Consolas,monospace`;
+
+        function drawGrid() {
+          ctx.lineWidth = 1;
+          for (let x = 0; x <= ARENA_W; x++) {
+            ctx.strokeStyle =
+              x % 2 ? "rgba(120,150,255,.06)" : "rgba(120,150,255,.13)";
+            ctx.beginPath();
+            ctx.moveTo(SX(x) + 0.5, 0);
+            ctx.lineTo(SX(x) + 0.5, V.h);
+            ctx.stroke();
+          }
+          for (let y = 0; y <= ARENA_H; y++) {
+            ctx.strokeStyle =
+              y % 2 ? "rgba(120,150,255,.06)" : "rgba(120,150,255,.13)";
+            ctx.beginPath();
+            ctx.moveTo(0, SY(y) + 0.5);
+            ctx.lineTo(V.w, SY(y) + 0.5);
+            ctx.stroke();
+          }
+          ctx.fillStyle = "rgba(150,170,230,.55)";
+          ctx.font = font(0.2 * V.s);
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          for (let x = 2; x < ARENA_W; x += 2)
+            ctx.fillText(x + "", SX(x), V.h - 2);
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          for (let y = 2; y < ARENA_H; y += 2) ctx.fillText(y + "", 3, SY(y));
+          ctx.textAlign = "right";
+          ctx.textBaseline = "bottom";
+          ctx.fillText("m", V.w - 4, V.h - 2);
+        }
+        function drawGens() {
+          G.gens.forEach((g, i) => {
+            const c = g.dir > 0 ? COL.out : COL.in,
+              sel = g.id === G.sel;
+            ctx.save();
+            ctx.setLineDash([Math.max(5, 0.16 * V.s), Math.max(4, 0.1 * V.s)]);
+            ctx.lineWidth = sel ? 2.6 : 1.6;
+            ctx.strokeStyle = `rgba(${c},${sel ? 1 : 0.8})`;
+            if (sel) {
+              ctx.shadowColor = `rgba(${c},.9)`;
+              ctx.shadowBlur = 12;
+            }
+            ctx.beginPath();
+            ctx.arc(SX(g.x), SY(g.y), g.R * V.s, 0, TAU);
+            ctx.stroke();
+            ctx.restore();
+            ctx.fillStyle = `rgba(${c},.95)`;
+            ctx.font = font(0.2 * V.s, 700);
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            // stagger labels of fields whose label anchors would collide (e.g. stacked fields)
+            let slot = 0;
+            const topY = clamp(g.y + g.R - 0.28, 0.3, ARENA_H - 0.3);
+            for (let j = 0; j < i; j++) {
+              const o = G.gens[j],
+                oy = clamp(o.y + o.R - 0.28, 0.3, ARENA_H - 0.3);
+              if (
+                Math.abs(o.x - g.x) < 2.6 &&
+                Math.abs(oy - topY) < 0.6 * (slot + 1)
+              )
+                slot++;
+            }
+            const ly = clamp(topY - 0.3 * slot, 0.3, ARENA_H - 0.3);
+            ctx.fillText(
+              `F${i + 1} ${g.dir > 0 ? "•" : "×"} ${(
+                g.dir * g.strength
+              ).toFixed(2)} T${g.locked ? " 🔒" : ""}`,
+              SX(g.x),
+              SY(ly)
+            );
+          });
+          // lattice of symbols showing the NET field (vector sum) at each point
+          const sp = 0.5;
+          ctx.lineWidth = Math.max(1.2, 0.024 * V.s);
+          ctx.lineCap = "round";
+          for (let ix = 0; ix < 32; ix++)
+            for (let iy = 0; iy < 20; iy++) {
+              const x = 0.25 + ix * sp,
+                y = 0.25 + iy * sp;
+              let b = 0,
+                cnt = 0;
+              for (const g of G.gens) {
+                const dx = x - g.x,
+                  dy = y - g.y;
+                if (dx * dx + dy * dy < g.R * g.R) {
+                  b += g.dir * g.strength;
+                  cnt++;
+                }
+              }
+              if (!cnt) continue;
+              const px = SX(x),
+                py = SY(y);
+              if (Math.abs(b) < 1e-9) {
+                ctx.strokeStyle = "rgba(190,200,230,.55)";
+                ctx.beginPath();
+                ctx.arc(px, py, 0.06 * V.s, 0, TAU);
+                ctx.stroke();
+                continue;
+              }
+              const f = Math.min(1, Math.abs(b) / 4),
+                r = (0.04 + 0.05 * f) * V.s;
+              if (b > 0) {
+                ctx.fillStyle = `rgba(${COL.out},.92)`;
+                ctx.beginPath();
+                ctx.arc(px, py, r, 0, TAU);
+                ctx.fill();
+              } else {
+                ctx.strokeStyle = `rgba(${COL.in},.95)`;
+                const k = r * 1.45;
+                ctx.beginPath();
+                ctx.moveTo(px - k, py - k);
+                ctx.lineTo(px + k, py + k);
+                ctx.moveTo(px - k, py + k);
+                ctx.lineTo(px + k, py - k);
+                ctx.stroke();
+              }
+              if (cnt > 1) {
+                ctx.strokeStyle = "rgba(255,255,255,.4)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(px, py, 0.115 * V.s, 0, TAU);
+                ctx.stroke();
+                ctx.lineWidth = Math.max(1.2, 0.024 * V.s);
+              }
+            }
+        }
+        function drawZones(time) {
+          // obstacles
+          for (const o of G.level.obstacles) {
+            ctx.fillStyle = "rgba(255,60,90,.2)";
+            ctx.strokeStyle = "rgba(255,90,110,.95)";
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            if (o.r !== undefined) ctx.arc(SX(o.x), SY(o.y), o.r * V.s, 0, TAU);
+            else ctx.rect(SX(o.x), SY(o.y + o.h), o.w * V.s, o.h * V.s);
+            ctx.fill();
+            ctx.fillStyle = ctx.createPattern(hatch, "repeat");
+            ctx.fill();
+            ctx.stroke();
+          }
+          // target
+          const T = G.level.target,
+            cx = SX(T.x),
+            cy = SY(T.y),
+            r = T.r * V.s,
+            pulse = (Math.sin(time / 350) + 1) / 2;
+          const hit =
+            G.sim && (G.sim.status === "success" || G.sim.status === "dwell");
+          const gr = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r * 1.6);
+          gr.addColorStop(
+            0,
+            hit ? "rgba(93,255,168,.5)" : "rgba(93,255,168,.22)"
+          );
+          gr.addColorStop(1, "rgba(93,255,168,0)");
+          ctx.fillStyle = gr;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r * 1.6, 0, TAU);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(93,255,168,.95)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, TAU);
+          ctx.stroke();
+          ctx.strokeStyle = "rgba(93,255,168,.55)";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r * 0.62, 0, TAU);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(cx, cy, r * 0.28, 0, TAU);
+          ctx.stroke();
+          ctx.strokeStyle = `rgba(93,255,168,${0.15 + 0.35 * pulse})`;
+          ctx.beginPath();
+          ctx.arc(cx, cy, r * (1.1 + 0.25 * pulse), 0, TAU);
+          ctx.stroke();
+          ctx.strokeStyle = "rgba(93,255,168,.7)";
+          ctx.beginPath();
+          ctx.moveTo(cx - r * 1.15, cy);
+          ctx.lineTo(cx + r * 1.15, cy);
+          ctx.moveTo(cx, cy - r * 1.15);
+          ctx.lineTo(cx, cy + r * 1.15);
+          ctx.stroke();
+          ctx.fillStyle = "rgba(93,255,168,.95)";
+          ctx.font = font(0.19 * V.s, 700);
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          ctx.fillText("TARGET", cx, cy - r * 1.25);
+        }
+        function drawTrail(pts, rgb, a0, w, extra) {
+          const n = pts.length + (extra ? 1 : 0);
+          if (n < 2) return;
+          const get = (i) => (i < pts.length ? pts[i] : extra),
+            CH = 28,
+            per = Math.ceil(n / CH);
+          ctx.lineWidth = w;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          for (let c = 0; c < CH; c++) {
+            const a = c * per,
+              b = Math.min(n - 1, (c + 1) * per);
+            if (a >= b) break;
+            ctx.strokeStyle = `rgba(${rgb},${
+              a0 * (0.12 + (0.88 * (c + 1)) / CH)
+            })`;
+            ctx.beginPath();
+            const p0 = get(a);
+            ctx.moveTo(SX(p0[0]), SY(p0[1]));
+            for (let i = a + 1; i <= b; i++) {
+              const p = get(i);
+              ctx.lineTo(SX(p[0]), SY(p[1]));
+            }
+            ctx.stroke();
+          }
+        }
+        function arrow(x0, y0, dx, dy, col, w) {
+          const px0 = SX(x0),
+            py0 = SY(y0),
+            px1 = SX(x0 + dx),
+            py1 = SY(y0 + dy);
+          ctx.strokeStyle = col;
+          ctx.fillStyle = col;
+          ctx.lineWidth = w;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(px0, py0);
+          ctx.lineTo(px1, py1);
+          ctx.stroke();
+          const a = Math.atan2(py1 - py0, px1 - px0),
+            hl = Math.max(7, 0.2 * V.s);
+          ctx.beginPath();
+          ctx.moveTo(px1, py1);
+          ctx.lineTo(
+            px1 - hl * Math.cos(a - 0.42),
+            py1 - hl * Math.sin(a - 0.42)
+          );
+          ctx.lineTo(
+            px1 - hl * Math.cos(a + 0.42),
+            py1 - hl * Math.sin(a + 0.42)
+          );
+          ctx.closePath();
+          ctx.fill();
+        }
+        function telemetryState() {
+          if (G.sim) {
+            const p = G.sim.p;
+            return {
+              t: G.sim.t,
+              x: p.x,
+              y: p.y,
+              vx: p.vx,
+              vy: p.vy,
+              q: p.q,
+              m: p.m,
+            };
+          }
+          const L = launchOf(),
+            a = (L.angle * Math.PI) / 180;
+          return {
+            t: 0,
+            x: L.x,
+            y: L.y,
+            vx: L.speed * Math.cos(a),
+            vy: L.speed * Math.sin(a),
+            q: L.sign * L.qmag,
+            m: L.mass,
+          };
+        }
+        function drawParticleAndVectors() {
+          const L = launchOf(),
+            rgb = L.sign > 0 ? COL.pos : COL.neg,
+            tel = telemetryState();
+          const gensForField = G.sim ? G.sim.gens : G.gens;
+          const a = (L.angle * Math.PI) / 180,
+            len = 0.55 + 0.17 * L.speed,
+            idle = G.status === "idle";
+          // START marker + fixed launch direction arrow
+          ctx.save();
+          ctx.globalAlpha = idle ? 1 : 0.35;
+          ctx.strokeStyle = `rgba(${rgb},.5)`;
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(SX(L.x), SY(L.y), PR * V.s * 1.8, 0, TAU);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          arrow(
+            L.x,
+            L.y,
+            len * Math.cos(a),
+            len * Math.sin(a),
+            `rgb(${rgb})`,
+            2.4
+          );
+          ctx.fillStyle = `rgb(${rgb})`;
+          ctx.font = font(0.19 * V.s, 700);
+          ctx.textAlign = "left";
+          ctx.textBaseline = "top";
+          ctx.fillText(
+            `START  v₀=${L.speed.toFixed(1)} m/s`,
+            SX(L.x) - 0.3 * V.s,
+            SY(L.y) + 0.3 * V.s
+          );
+          ctx.restore();
+          // trails
+          if (G.ghost) drawTrail(G.ghost, "200,210,255", 0.28, 1.4, null);
+          if (G.preview && G.status === "idle" && G.opt.preview) {
+            ctx.save();
+            ctx.setLineDash([3, 6]);
+            drawTrail(G.preview, "255,255,255", 0.55, 2, null);
+            ctx.restore();
+          }
+          if (G.sim)
+            drawTrail(G.sim.trail, rgb, 0.95, Math.max(2, 0.05 * V.s), [
+              G.sim.p.x,
+              G.sim.p.y,
+            ]);
+          // "missed by" marker
+          if (
+            G.sim &&
+            G.sim.done &&
+            G.sim.status !== "success" &&
+            G.sim.closestPt
+          ) {
+            const T = G.level.target,
+              cp = G.sim.closestPt;
+            ctx.save();
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = "rgba(255,200,87,.9)";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(SX(cp[0]), SY(cp[1]));
+            ctx.lineTo(SX(T.x), SY(T.y));
+            ctx.stroke();
+            ctx.restore();
+            ctx.fillStyle = "rgba(255,200,87,.95)";
+            ctx.font = font(0.2 * V.s, 700);
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            ctx.fillText(
+              `missed by ${G.sim.closest.toFixed(1)} m`,
+              (SX(cp[0]) + SX(T.x)) / 2,
+              (SY(cp[1]) + SY(T.y)) / 2 - 4
+            );
+          }
+          // particle
+          const cx = SX(tel.x),
+            cy = SY(tel.y),
+            pr = Math.max(7, PR * V.s * 1.25);
+          const gl = ctx.createRadialGradient(cx, cy, 0, cx, cy, pr * 3);
+          gl.addColorStop(0, `rgba(${rgb},.55)`);
+          gl.addColorStop(1, `rgba(${rgb},0)`);
+          ctx.fillStyle = gl;
+          ctx.beginPath();
+          ctx.arc(cx, cy, pr * 3, 0, TAU);
+          ctx.fill();
+          ctx.fillStyle = `rgb(${rgb})`;
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.arc(cx, cy, pr, 0, TAU);
+          ctx.fill();
+          ctx.stroke();
+          ctx.strokeStyle = "#0a0f22";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(cx - pr * 0.5, cy);
+          ctx.lineTo(cx + pr * 0.5, cy);
+          if (tel.q > 0) {
+            ctx.moveTo(cx, cy - pr * 0.5);
+            ctx.lineTo(cx, cy + pr * 0.5);
+          }
+          ctx.stroke();
+          // physics vectors
+          if (
+            G.opt.vectors &&
+            G.sim &&
+            (!G.sim.done || G.sim.status === "success")
+          ) {
+            const bz = Physics.bzAt(gensForField, tel.x, tel.y),
+              F = Physics.lorentz(tel.q, tel.vx, tel.vy, bz),
+              sp = Math.hypot(tel.vx, tel.vy);
+            arrow(
+              tel.x,
+              tel.y,
+              tel.vx * 0.18,
+              tel.vy * 0.18,
+              "rgba(160,215,255,.95)",
+              2
+            );
+            const fm = Math.hypot(F.fx, F.fy);
+            if (fm > 1e-9) {
+              const l = clamp(fm * 0.12, 0.35, 1.5);
+              arrow(
+                tel.x,
+                tel.y,
+                (F.fx / fm) * l,
+                (F.fy / fm) * l,
+                "rgba(255,94,203,.98)",
+                2.2
+              );
+              const r = Physics.cyclotronRadius(tel.m, sp, tel.q, bz);
+              if (r < 9) {
+                ctx.save();
+                ctx.setLineDash([5, 6]);
+                ctx.strokeStyle = "rgba(255,255,255,.3)";
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.arc(
+                  SX(tel.x + (F.fx / fm) * r),
+                  SY(tel.y + (F.fy / fm) * r),
+                  r * V.s,
+                  0,
+                  TAU
+                );
+                ctx.stroke();
+                ctx.restore();
+              }
+            }
+          }
+        }
+        function drawHandles() {
+          const g = selGen();
+          if (!g) return;
+          ctx.strokeStyle = "rgba(255,255,255,.75)";
+          ctx.lineWidth = 1.4;
+          const cx = SX(g.x),
+            cy = SY(g.y),
+            k = 0.14 * V.s;
+          ctx.beginPath();
+          ctx.moveTo(cx - k, cy);
+          ctx.lineTo(cx + k, cy);
+          ctx.moveTo(cx, cy - k);
+          ctx.lineTo(cx, cy + k);
+          ctx.stroke();
+          if (!g.locked) {
+            const h = rimHandle(g);
+            ctx.fillStyle = "#fff";
+            ctx.strokeStyle = "#4cc9f0";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(SX(h.x), SY(h.y), Math.max(6, 0.12 * V.s), 0, TAU);
+            ctx.fill();
+            ctx.stroke();
+          }
+        }
+        function drawEmptyHint() {
+          if (G.status !== "idle" || editableCount() > 0) return;
+          const msg =
+            'Step 1: add a magnetic field with "＋ Field" on the right  →  Step 2: press LAUNCH';
+          ctx.font = font(0.22 * V.s, 600);
+          const w = ctx.measureText(msg).width + 24,
+            h = 0.5 * V.s,
+            x = (V.w - w) / 2,
+            y = V.h - h - 0.45 * V.s;
+          if (w > V.w - 8) return;
+          ctx.fillStyle = "rgba(8,14,34,.82)";
+          ctx.strokeStyle = "rgba(76,201,240,.6)";
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.roundRect ? ctx.roundRect(x, y, w, h, 10) : ctx.rect(x, y, w, h);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = "#bfe9ff";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(msg, V.w / 2, y + h / 2);
+        }
+        function draw(time) {
+          ctx.setTransform(V.dpr, 0, 0, V.dpr, 0, 0);
+          const bg = ctx.createLinearGradient(0, 0, 0, V.h);
+          bg.addColorStop(0, "#0c1430");
+          bg.addColorStop(1, "#070b18");
+          ctx.fillStyle = bg;
+          ctx.fillRect(0, 0, V.w, V.h);
+          drawGrid();
+          if (G.fieldDirty) {
+            rebuildField();
+            G.fieldDirty = false;
+          }
+          if (G.opt.intensity) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.drawImage(FC, 0, 0, V.w, V.h);
+          }
+          drawGens();
+          drawZones(time);
+          drawParticleAndVectors();
+          drawHandles();
+          drawEmptyHint();
+        }
+
+        /* ---------- telemetry ---------- */
+        const sgn = (v, d) => {
+          if (!isFinite(v)) return "∞";
+          const z = Math.abs(v) < 0.5 * Math.pow(10, -d) ? 0 : v;
+          return (z < 0 ? "−" : "+") + Math.abs(z).toFixed(d);
+        };
+        const setT = (id, txt) => {
+          const e = $(id);
+          if (e.textContent !== txt) e.textContent = txt;
+        };
+        function updateTelemetry() {
+          const s = telemetryState(),
+            gens = G.sim ? G.sim.gens : G.gens;
+          const bz = Physics.bzAt(gens, s.x, s.y),
+            sp = Math.hypot(s.vx, s.vy);
+          const r = Physics.cyclotronRadius(s.m, sp, s.q, bz);
+          const hud = $("hud");
+          if (G.sim && !G.sim.done) {
+            hud.textContent = `t ${s.t.toFixed(2)} s   |v| ${sp.toFixed(
+              2
+            )} m/s   B ${Math.abs(bz) < 1e-9 ? "0" : sgn(bz, 2)} T   r ${
+              isFinite(r) ? r.toFixed(2) + " m" : "∞"
+            }`;
+            hud.style.display = "";
+          } else if (
+            G.hover &&
+            G.hover.x >= 0 &&
+            G.hover.x <= ARENA_W &&
+            G.hover.y >= 0 &&
+            G.hover.y <= ARENA_H
+          ) {
+            const hb = Physics.bzAt(G.gens, G.hover.x, G.hover.y);
+            hud.textContent = `(${G.hover.x.toFixed(2)}, ${G.hover.y.toFixed(
+              2
+            )}) m   B = ${Math.abs(hb) < 1e-9 ? "0" : sgn(hb, 2)} T`;
+            hud.style.display = "";
+          } else hud.style.display = "none";
+          if (!$("cDetails").open) return; // skip the heavy readout while the panel is collapsed
+          const F = Physics.lorentz(s.q, s.vx, s.vy, bz),
+            A = Physics.accel(s.q, s.m, s.vx, s.vy, bz);
+          setT("tT", s.t.toFixed(3) + " s");
+          setT("tKE", (0.5 * s.m * sp * sp).toFixed(3) + " J");
+          setT("tX", sgn(s.x, 3) + " m");
+          setT("tY", sgn(s.y, 3) + " m");
+          setT("tVx", sgn(s.vx, 3) + " m/s");
+          setT("tVy", sgn(s.vy, 3) + " m/s");
+          setT("tV", sp.toFixed(4) + " m/s");
+          setT("tAx", sgn(A.ax, 3) + " m/s²");
+          setT("tAy", sgn(A.ay, 3) + " m/s²");
+          setT("tFx", sgn(F.fx, 3) + " N");
+          setT("tFy", sgn(F.fy, 3) + " N");
+          setT(
+            "tB",
+            Math.abs(bz) < 1e-9
+              ? "0.00 T"
+              : sgn(bz, 2) + " T " + (bz > 0 ? "•" : "×")
+          );
+          setT("tR", isFinite(r) ? r.toFixed(3) + " m" : "∞ (no field)");
+          setT(
+            "tFv",
+            (F.fx * s.vx + F.fy * s.vy === 0
+              ? "0"
+              : (F.fx * s.vx + F.fy * s.vy).toExponential(1)) + " W"
+          );
+          const src = Physics.sources(gens, s.x, s.y);
+          setT(
+            "tSrc",
+            !src.length
+              ? "outside all fields → B = 0"
+              : src.length === 1
+              ? `F${src[0].n}: ${sgn(src[0].B, 2)} T`
+              : src.map((o) => `F${o.n} ${sgn(o.B, 2)}`).join("  ") +
+                `  =  ${sgn(bz, 2)} T`
+          );
+        }
+
+        /* ---------- main loop: fixed-step physics decoupled from rendering ---------- */
+        let last = performance.now();
+        function frame(now) {
+          const dtReal = Math.min(0.1, (now - last) / 1000);
+          last = now;
+          if (G.status === "running" && G.sim) {
+            G.acc += dtReal * G.speedMul;
+            let n = 0;
+            while (G.acc >= DT && n < 800 && !G.sim.done) {
+              G.sim.step(DT);
+              G.acc -= DT;
+              n++;
+            }
+            if (G.sim.done) onSimDone();
+          }
+          if (G.opt.preview && G.status === "idle" && G.previewDirty) {
+            G.preview = new Simulation(G.level, G.gens, launchOf()).runToEnd(
+              DT
+            ).trail;
+            G.previewDirty = false;
+          }
+          updateTelemetry();
+          draw(now);
+          requestAnimationFrame(frame);
+        }
+
+        /* ---------- boot ---------- */
+        Object.assign(G.opt, save.opt);
+        G.speedMul = save.speed || 1;
+        $("optPreview").checked = G.opt.preview;
+        $("optIntensity").checked = G.opt.intensity;
+        $("optVectors").checked = G.opt.vectors;
+        $("selSpeed").value = String(G.speedMul);
+        if ($("selSpeed").value !== String(G.speedMul)) {
+          $("selSpeed").value = "1";
+          G.speedMul = 1;
+        }
+        if (!storageOK) setSaveState("not saving (storage blocked)", "bad");
+        else setSaveState("", "");
+        resize();
+        loadLevel(clamp(save.last | 0, 0, LEVELS.length - 1));
+        (function selfCheck() {
+          let res;
+          try {
+            res = Physics.runTests();
+          } catch (e) {
+            res = [{ pass: false }];
+          }
+          const ok = res.filter((r) => r.pass).length,
+            el = $("selfcheck");
+          el.textContent = `Physics self-check: ${ok}/${
+            res.length
+          } tests passed (Boris integrator, dt = ${DT * 1000} ms).`;
+          el.className = ok === res.length ? "ok" : "no";
+          if (typeof console !== "undefined")
+            console.log(
+              "Magnetic Architect physics tests:",
+              res.map((r) => (r.pass ? "PASS " : "FAIL ") + r.id)
+            );
+        })();
+        if (!save.seenHelp) showHelp();
+        requestAnimationFrame(frame);
+      })();
+      // ==== UI END ====
+    </script>
+  </body>
+</html>
